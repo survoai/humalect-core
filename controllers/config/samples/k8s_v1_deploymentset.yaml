@@ -1,0 +1,106 @@
+apiVersion: k8s.humalect.com/v1
+kind: DeploymentSet
+metadata:
+  labels:
+    app.kubernetes.io/name: deploymentset
+    app.kubernetes.io/instance: deploymentset-sample
+    app.kubernetes.io/part-of: humalect-core-v2
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: humalect-core-v2
+  name: deploymentset-sample
+  namespace: default
+spec:
+  sourceCodeToken: ghs_5nYstE27XKjnm8x121213e2
+  sourceCodeProvider: github
+  k8sResourcesIdentifier: organizat1i-57596a4f-bcb2-4a01-9b9b
+  cloudRegion: ap-south-1
+  cloudProvider: aws
+  sourceCodeOrgName: encrypt3r12
+  sourceCodeRepositoryName: project_name
+  commitId: e2f73a3ee712ca391a03634b9666cce1f82675d9
+  dockerManifest:
+    - FROM node:18-alpine
+    - EXPOSE 1337
+    - RUN mkdir -p /usr/src/app
+    - WORKDIR /usr/src/app
+    - COPY package.json package.json
+    - RUN npm install
+    - COPY . .
+    - CMD ["npm","start"]
+  deploymentYamlManifest:
+    metadata:
+      name: rest-test-manav-humalect-dev
+      namespace: default
+      labels:
+        branchName: master
+        managedBy: humalect
+        organization: organizati-56a4f-bcb2-4a01-9b9b-b6bd872115ea
+        deploymentId: 6456ac2505b0e5948261523b
+        projectName: rest
+        environmentName: default
+    spec:
+      selector:
+        matchLabels:
+          app: rest-test-manav-humalect-dev
+      replicas: 3
+      template:
+        metadata:
+          labels:
+            app: rest-test-manav-humalect-dev
+            deploymentId: 6456ac2505b0e5948261511
+            managedBy: humalect
+        spec:
+          containers:
+            - name: back-end
+              image: "073328469200.dkr.ecr.ap-south-1.amazonaws.com/rest:e2f73a3ee70eca391a03634b9666cce1f82675d9"
+              imagePullPolicy: IfNotPresent
+              ports:
+                - containerPort: 80
+              envFrom: []
+          volumes: []
+  serviceYamlManifest:
+    metadata:
+      name: rest-test-manav-humalect-dev-svc
+      labels:
+        branchName: master
+        managedBy: humalect
+        organization: organizati-57596a4f-bcb2-4a01-9b9b-b6bd872115ea
+        deploymentId: 6456ac2505b0e5948261523b
+    spec:
+      type: ClusterIP
+      selector:
+        app: rest-test-manav-humalect-dev
+      ports:
+        - port: 80
+          targetPort: 80
+  ingressYamlManifest:
+    metadata:
+      name: test-manav-humalect-dev
+      annotations:
+        cert-manager.io/cluster-issuer: letsencrypt-prod
+        kubernetes.io/ingress.class: nginx
+      labels:
+        domain: manav.humalect.dev
+        branchName: master
+        managedBy: humalect
+        organization: organizati-57596a4f-bcb2-4a01-9b9b-b6bd872115ea
+        deploymentId: 6456ac2505b0e5948261523b
+    spec:
+      tls:
+        - hosts:
+            - test.manav.humalect.dev
+          secretName: test-manav-humalect-dev
+      rules:
+        - host: test.manav.humalect.dev
+          http:
+            paths:
+              - pathType: Prefix
+                path: "/"
+                backend:
+                  service:
+                    name: rest-test-manav-humalect-dev-svc
+                    port:
+                      number: 80
+  secretManagerName: test-rest-165m
+  managedBy: humalect
+  useDockerFromCodeFlag: false

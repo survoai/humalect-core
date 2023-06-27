@@ -1,0 +1,7 @@
+go mod init k8s.humalect.com
+kubebuilder init --domain humalect.com --repo github.com/Humalect/humalect-core
+kubebuilder create api --group k8s --version v1 --kind Application
+
+
+k apply -f config/crd/bases/k8s.humalect.com_applications.yaml
+k apply -f config/samples/k8s_v1_application.yaml
