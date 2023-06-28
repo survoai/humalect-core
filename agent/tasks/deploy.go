@@ -3,10 +3,12 @@ package tasks
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 
 	"github.com/Humalect/humalect-core/agent/constants"
 	"github.com/Humalect/humalect-core/agent/services"
 	"github.com/Humalect/humalect-core/agent/utils"
+	corev1 "k8s.io/api/core/v1"
 )
 
 func Deploy(config *constants.ParamsConfig) error {
@@ -37,6 +39,9 @@ func Deploy(config *constants.ParamsConfig) error {
 	// 	fmt.Println(err)
 	// 	return err
 	// }
+	log.Println("Creating Docker Registry Secret AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
+	fmt.Println("Creating Docker  dfas gRegistry Se sagcret AAAAAsdgadbAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
+
 	kanikoJobResources, err := services.CreateKanikoJob(*config)
 	if err != nil {
 		config.WebhookData = utils.UpdateStatusData(config.WebhookData, constants.CreatedKanikoJob, false)
@@ -58,6 +63,7 @@ func Deploy(config *constants.ParamsConfig) error {
 	services.SendWebhook(config.WebhookEndpoint, config.WebhookData, true, constants.KanikoJobExecuted)
 	var deploymentYamlManifest constants.DeploymentYamlManifestType
 	err = json.Unmarshal([]byte(config.DeploymentYamlManifest), &deploymentYamlManifest)
+	deploymentYamlManifest.Spec.Template.Spec.ImagePullSecrets = []corev1.LocalObjectReference{{Name: kanikoJobResources.CloudProviderSecretName}}
 
 	if err != nil {
 		fmt.Println(err)

@@ -134,10 +134,47 @@ func (r *DeploymentSetReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	log.Info("Creating Job")
 	fmt.Println(deploymentSet.Spec.DockerManifest)
 	agentImageTag, exists := os.LookupEnv("AGENT_IMAGE_TAG")
+
 	if !exists {
 		agentImageTag = "latest"
+		fmt.Print(agentImageTag)
 	}
 	backoffLimit := int32(0)
+
+	ecrCredentials, err := json.Marshal(deploymentSet.Spec.EcrCredentials)
+	if err != nil {
+		deploymentSet.Spec.WebhookData = helpers.UpdateStatusData(deploymentSet.Spec.WebhookData, constants.DeploymentJobCreated, false)
+		sendDeploymentJobCreatedWebhook(*deploymentSet, false)
+		panic(err)
+	}
+
+	acrCredentials, err := json.Marshal(deploymentSet.Spec.AcrCredentials)
+	if err != nil {
+		deploymentSet.Spec.WebhookData = helpers.UpdateStatusData(deploymentSet.Spec.WebhookData, constants.DeploymentJobCreated, false)
+		sendDeploymentJobCreatedWebhook(*deploymentSet, false)
+		panic(err)
+	}
+
+	dockerHubCredentials, err := json.Marshal(deploymentSet.Spec.DockerHubCredentials)
+	if err != nil {
+		deploymentSet.Spec.WebhookData = helpers.UpdateStatusData(deploymentSet.Spec.WebhookData, constants.DeploymentJobCreated, false)
+		sendDeploymentJobCreatedWebhook(*deploymentSet, false)
+		panic(err)
+	}
+
+	awsSecretCredentials, err := json.Marshal(deploymentSet.Spec.AwsSecretCredentials)
+	if err != nil {
+		deploymentSet.Spec.WebhookData = helpers.UpdateStatusData(deploymentSet.Spec.WebhookData, constants.DeploymentJobCreated, false)
+		sendDeploymentJobCreatedWebhook(*deploymentSet, false)
+		panic(err)
+	}
+
+	azureSecretCredentials, err := json.Marshal(deploymentSet.Spec.AzureSecretCredentials)
+	if err != nil {
+		deploymentSet.Spec.WebhookData = helpers.UpdateStatusData(deploymentSet.Spec.WebhookData, constants.DeploymentJobCreated, false)
+		sendDeploymentJobCreatedWebhook(*deploymentSet, false)
+		panic(err)
+	}
 
 	jobObj := &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
@@ -153,9 +190,16 @@ func (r *DeploymentSetReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 					Containers: []corev1.Container{
 						{
 							Name:            fmt.Sprintf("%s-ds-%s", deploymentSet.Spec.ManagedBy, deploymentSet.Spec.CommitId),
-							Image:           "public.ecr.aws/humalect/core-agent:" + agentImageTag,
+							Image:           "public.ecr.aws/humalect/newagent:lakshya",
 							ImagePullPolicy: corev1.PullPolicy("Always"),
 							Args: []string{
+								fmt.Sprintf("--registryProvider=%s", deploymentSet.Spec.RegistryProvider),
+								fmt.Sprintf("--secretsProvider=%s", deploymentSet.Spec.SecretsProvider),
+								fmt.Sprintf("--ecrCredentials=%s", ecrCredentials),
+								fmt.Sprintf("--acrCredentials=%s", acrCredentials),
+								fmt.Sprintf("--dockerHubCredentials=%s", dockerHubCredentials),
+								fmt.Sprintf("--awsSecretCredentials=%s", awsSecretCredentials),
+								fmt.Sprintf("--azureSecretCredentials=%s", azureSecretCredentials),
 								fmt.Sprintf("--cloudProvider=%s", deploymentSet.Spec.CloudProvider),
 								fmt.Sprintf("--azureManagementScopeToken=%s", deploymentSet.Spec.AzureManagementScopeToken),
 								fmt.Sprintf("--sourceCodeRepositoryName=%s", deploymentSet.Spec.SourceCodeRepositoryName),

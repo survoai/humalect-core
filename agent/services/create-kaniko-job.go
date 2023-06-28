@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -10,8 +11,14 @@ import (
 	"math"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/Humalect/humalect-core/agent/constants"
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/ecr"
+	"github.com/aws/aws-sdk-go/service/secretsmanager"
 
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -73,15 +80,130 @@ func CreateKanikoJob(params constants.ParamsConfig) (CreateJobConfig, error) {
 }
 
 func createCloudProviderCredSecrets(clientset *kubernetes.Clientset, params constants.ParamsConfig) (string, error) {
-	if params.CloudProvider == constants.CloudIdAzure {
-		azureCreds, err := getOrgAzureCredsForAcr(params.AzureManagementScopeToken, params.AzureAcrRegistryName,
-			params.AzureSubscriptionId,
-			params.AzureResourceGroupName)
+
+	//----------------------------------ECR REGISTRY---------------------------------------------
+	if params.RegistryProvider == constants.RegistryIdAWS {
+		log.Printf("Ecr Credentials: %v", params.EcrCredentials)
+
+		var creds map[string]interface{}
+		err := json.Unmarshal([]byte(params.EcrCredentials), &creds)
+
+		if err != nil {
+			log.Fatalf("Failed to parse ECR credentials got error : %v", err)
+			return "", err
+		}
+
+		ecrToken, err := getEcrLoginToken(creds["awsTempAccessKey"].(string), creds["awsTempSecretKey"].(string))
+
+		if err != nil {
+			log.Fatalf("Error getting ECR token: %v", err)
+			return "", err
+		}
+
+		dockerRegistrySecret := &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: fmt.Sprintf("%s-ksec-ecr-%s-%s",
+					params.ManagedBy[:int(math.Min(float64(len(params.ManagedBy)), float64(10)))],
+					params.CommitId[:int(math.Min(float64(len(params.CommitId)), float64(5)))],
+					params.DeploymentId[:int(math.Min(float64(len(params.DeploymentId)), float64(7)))]),
+				Namespace: "humalect",
+				Labels: map[string]string{
+					"app": fmt.Sprintf("%s-build-push-dockerecrimage-%s-%s",
+						params.ManagedBy[:int(math.Min(float64(len(params.ManagedBy)), float64(10)))],
+						params.CommitId[:int(math.Min(float64(len(params.CommitId)), float64(5)))],
+						params.DeploymentId[:int(math.Min(float64(len(params.DeploymentId)), float64(7)))]),
+					"DeploymentId": params.DeploymentId,
+					"ManagedBy":    params.ManagedBy,
+					"CommitId":     params.CommitId,
+				},
+			},
+			Type: corev1.SecretTypeDockerConfigJson,
+			StringData: map[string]string{
+				".dockerconfigjson": fmt.Sprintf(`{  
+					"auths": {  
+						"073328469200.dkr.ecr.ap-south-1.amazonaws.com": {  
+							"username":"AWS",
+							"password": "%s"  
+						}  
+					}  
+				}`, ecrToken),
+			},
+		}
+		// Create the Docker registry secret in the default Namespace
+		createdSecret, err := clientset.CoreV1().Secrets("humalect").Create(context.Background(), dockerRegistrySecret, metav1.CreateOptions{})
+		if err != nil {
+			log.Fatalf("Error creating docker registry secret secret: %v", err)
+		}
+		log.Printf("Docker Registry Secret %s created in Namespace %s\n", createdSecret.Name, createdSecret.Namespace)
+		return createdSecret.Name, nil
+
+	} else if params.RegistryProvider == constants.RegistryIdDockerhub {
+		//-------------------------------------DOCKERHUB REGISTRY---------------------------------------
+		secretData, err := getDockerHubSecretKey(params)
+
+		if err != nil {
+			log.Fatalf("Error getting dockerhub secret: %v", err)
+			return "", err
+		}
+
+		dockerRegistrySecret := &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: fmt.Sprintf("%s-ksec-dh-%s-%s",
+					params.ManagedBy[:int(math.Min(float64(len(params.ManagedBy)), float64(10)))],
+					params.CommitId[:int(math.Min(float64(len(params.CommitId)), float64(5)))],
+					params.DeploymentId[:int(math.Min(float64(len(params.DeploymentId)), float64(7)))]),
+				Namespace: "humalect",
+				Labels: map[string]string{
+					"app": fmt.Sprintf("%s-build-push-dockerHubimage-%s-%s",
+						params.ManagedBy[:int(math.Min(float64(len(params.ManagedBy)), float64(10)))],
+						params.CommitId[:int(math.Min(float64(len(params.CommitId)), float64(5)))],
+						params.DeploymentId[:int(math.Min(float64(len(params.DeploymentId)), float64(7)))]),
+					"DeploymentId": params.DeploymentId,
+					"ManagedBy":    params.ManagedBy,
+					"CommitId":     params.CommitId,
+				},
+			},
+			Type: corev1.SecretTypeDockerConfigJson,
+			StringData: map[string]string{
+				".dockerconfigjson": strings.Join(strings.Fields(fmt.Sprintf(`{  
+					"auths": {  
+						"https://index.docker.io/v1/": {  
+							"auth": "%s"  
+						}  
+					}  
+				}`, secretData)), ""),
+			},
+		}
+
+		// Create the Docker registry secret in the default Namespace
+		createdSecret, err := clientset.CoreV1().Secrets("humalect").Create(context.Background(), dockerRegistrySecret, metav1.CreateOptions{})
+		if err != nil {
+			log.Fatalf("Error creating docker registry secret secret: %v", err)
+		}
+
+		log.Printf("Docker Registry Secret %s created in Namespace %s\n", createdSecret.Name, createdSecret.Namespace)
+
+		return createdSecret.Name, nil
+
+	} else if params.RegistryProvider == constants.RegistryIdAzure {
+		//-------------------------------------ACR REGISTRY---------------------------------------
+
+		var creds map[string]interface{}
+		err := json.Unmarshal([]byte(params.AcrCredentials), &creds)
+
+		if err != nil {
+			log.Fatalf("Failed to parse ECR credentials got error : %v", err)
+			return "", err
+		}
+
+		azureCreds, err := getOrgAzureCredsForAcr(creds["azureManagementScopeToken"].(string), creds["azureAcrRegistryName"].(string),
+			creds["azureSubscriptionId"].(string), creds["azureResourceGroupName"].(string))
 		if err != nil {
 			log.Fatalf("Error getting Azure ACR creds: %v", err)
 			return "", err
 		}
 
+		// azureCreds, err := getOrgAzureCredsForAcr(params.AzureManagementScopeToken, params.AzureAcrRegistryName, params.AzureSubscriptionId, params.AzureResourceGroupName)
 		dockerRegistrySecret := &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: fmt.Sprintf("%s-ksec-%s-%s",
@@ -108,7 +230,7 @@ func createCloudProviderCredSecrets(clientset *kubernetes.Clientset, params cons
 							"password": "%s"  
 						}  
 					}  
-				}`, params.AzureAcrRegistryName, azureCreds.Username, azureCreds.Password),
+				}`, creds["azureAcrRegistryName"].(string), azureCreds.Username, azureCreds.Password),
 			},
 		}
 
@@ -119,12 +241,175 @@ func createCloudProviderCredSecrets(clientset *kubernetes.Clientset, params cons
 		}
 
 		log.Printf("Docker Registry Secret %s created in Namespace %s\n", createdSecret.Name, createdSecret.Namespace)
-
 		return createdSecret.Name, nil
-
-	} else {
-		return "", nil
 	}
+
+	// if params.CloudProvider == constants.CloudIdCivo {
+	// log.Printf("%s    %s        %s     %s      %s", params.CloudProvider, params.RegistryProvider, params.AWSTempAccessKey, params.AWSTempSecretKey, params.SecretManagerName)
+
+	// var secretData string
+	// if params.RegistryProvider == constants.RegistryIdDockerhub {
+
+	// if params.SecretManagerName == constants.CloudIdAWS {
+	// 	// secretData, _ = getAwsSecretValue("lak-test", params.AWSTempAccessKey, params.AWSTempSecretKey, "ap-south-1")
+
+	// 	// if err != nil {
+	// 	// 	log.Fatalf("Error getting dockerhub secret: %v", err)
+	// 	// 	return "", err
+	// 	// }
+
+	// 	fmt.Println("secretData", secretData)
+	// } else if params.SecretManagerName == constants.CloudIdAzure {
+	// 	secretData, _ = getAzureSecretString(params.AzureVaultToken, params.AzureVaultName, "lak-test")
+
+	// 	// if err != nil {
+	// 	// 	log.Fatalf("Error getting dockerhub secret: %v", err)
+	// 	// 	return "", err
+	// 	// }
+
+	// 	fmt.Println("secretData", secretData)
+	// }
+
+	// dockerRegistrySecret := &corev1.Secret{
+	// 	ObjectMeta: metav1.ObjectMeta{
+	// 		Name: fmt.Sprintf("%s-ksec-dh-%s-%s",
+	// 			params.ManagedBy[:int(math.Min(float64(len(params.ManagedBy)), float64(10)))],
+	// 			params.CommitId[:int(math.Min(float64(len(params.CommitId)), float64(5)))],
+	// 			params.DeploymentId[:int(math.Min(float64(len(params.DeploymentId)), float64(7)))]),
+	// 		Namespace: "humalect",
+	// 		Labels: map[string]string{
+	// 			"app": fmt.Sprintf("%s-build-push-dockerHubimage-%s-%s",
+	// 				params.ManagedBy[:int(math.Min(float64(len(params.ManagedBy)), float64(10)))],
+	// 				params.CommitId[:int(math.Min(float64(len(params.CommitId)), float64(5)))],
+	// 				params.DeploymentId[:int(math.Min(float64(len(params.DeploymentId)), float64(7)))]),
+	// 			"DeploymentId": params.DeploymentId,
+	// 			"ManagedBy":    params.ManagedBy,
+	// 			"CommitId":     params.CommitId,
+	// 		},
+
+	// 	},
+	// 	Type: corev1.SecretTypeDockerConfigJson,
+	// 	StringData: map[string]string{
+	// 		".dockerconfigjson": fmt.Sprintf(`{
+	// 			"auths": {
+	// 				"https://index.docker.io/v1/": {
+	// 					"auth": "%s"
+	// 				}
+	// 			}
+	// 		}`, secretData),
+	// 	},
+	// }
+
+	// // Create the Docker registry secret in the default Namespace
+	// createdSecret, err := clientset.CoreV1().Secrets("humalect").Create(context.Background(), dockerRegistrySecret, metav1.CreateOptions{})
+	// if err != nil {
+	// 	log.Fatalf("Error creating docker registry secret secret: %v", err)
+	// }
+
+	// log.Printf("Docker Registry Secret %s created in Namespace %s\n", createdSecret.Name, createdSecret.Namespace)
+
+	// return createdSecret.Name, nil
+	// } else if params.RegistryProvider == constants.CloudIdAWS {
+	// ecrToken, err := getEcrLoginToken(params.AWSTempAccessKey, params.AWSTempSecretKey)
+
+	// if err != nil {
+	// 	log.Fatalf("Error getting ECR token: %v", err)
+	// 	return "", err
+	// }
+
+	// dockerRegistrySecret := &corev1.Secret{
+	// 	ObjectMeta: metav1.ObjectMeta{
+	// 		Name: fmt.Sprintf("%s-ksec-ecr-%s-%s",
+	// 			params.ManagedBy[:int(math.Min(float64(len(params.ManagedBy)), float64(10)))],
+	// 			params.CommitId[:int(math.Min(float64(len(params.CommitId)), float64(5)))],
+	// 			params.DeploymentId[:int(math.Min(float64(len(params.DeploymentId)), float64(7)))]),
+	// 		Namespace: "humalect",
+	// 		Labels: map[string]string{
+	// 			"app": fmt.Sprintf("%s-build-push-dockerecrimage-%s-%s",
+	// 				params.ManagedBy[:int(math.Min(float64(len(params.ManagedBy)), float64(10)))],
+	// 				params.CommitId[:int(math.Min(float64(len(params.CommitId)), float64(5)))],
+	// 				params.DeploymentId[:int(math.Min(float64(len(params.DeploymentId)), float64(7)))]),
+	// 			"DeploymentId": params.DeploymentId,
+	// 			"ManagedBy":    params.ManagedBy,
+	// 			"CommitId":     params.CommitId,
+	// 		},
+	// 	},
+	// 	Type: corev1.SecretTypeDockerConfigJson,
+	// 	StringData: map[string]string{
+	// 		".dockerconfigjson": fmt.Sprintf(`{
+	// 			"auths": {
+	// 				"073328469200.dkr.ecr.ap-south-1.amazonaws.com": {
+	// 					"username":"AWS",
+	// 					"password": "%s"
+	// 				}
+	// 			}
+	// 		}`, ecrToken),
+	// 	},
+	// }
+
+	// // Create the Docker registry secret in the default Namespace
+	// createdSecret, err := clientset.CoreV1().Secrets("humalect").Create(context.Background(), dockerRegistrySecret, metav1.CreateOptions{})
+	// if err != nil {
+	// 	log.Fatalf("Error creating docker registry secret secret: %v", err)
+	// }
+
+	// log.Printf("Docker Registry Secret %s created in Namespace %s\n", createdSecret.Name, createdSecret.Namespace)
+
+	// return createdSecret.Name, nil
+	// }
+	// } else if params.CloudProvider == constants.CloudIdAzure || params.RegistryProvider == constants.CloudIdAzure {
+	// azureCreds, err := getOrgAzureCredsForAcr(params.AzureManagementScopeToken, params.AzureAcrRegistryName,
+	// 	params.AzureSubscriptionId,
+	// 	params.AzureResourceGroupName)
+	// if err != nil {
+	// 	log.Fatalf("Error getting Azure ACR creds: %v", err)
+	// 	return "", err
+	// }
+
+	// dockerRegistrySecret := &corev1.Secret{
+	// 	ObjectMeta: metav1.ObjectMeta{
+	// 		Name: fmt.Sprintf("%s-ksec-%s-%s",
+	// 			params.ManagedBy[:int(math.Min(float64(len(params.ManagedBy)), float64(10)))],
+	// 			params.CommitId[:int(math.Min(float64(len(params.CommitId)), float64(5)))],
+	// 			params.DeploymentId[:int(math.Min(float64(len(params.DeploymentId)), float64(7)))]),
+	// 		Namespace: "humalect",
+	// 		Labels: map[string]string{
+	// 			"app": fmt.Sprintf("%s-build-push-dockerimage-%s-%s",
+	// 				params.ManagedBy[:int(math.Min(float64(len(params.ManagedBy)), float64(10)))],
+	// 				params.CommitId[:int(math.Min(float64(len(params.CommitId)), float64(5)))],
+	// 				params.DeploymentId[:int(math.Min(float64(len(params.DeploymentId)), float64(7)))]),
+	// 			"DeploymentId": params.DeploymentId,
+	// 			"ManagedBy":    params.ManagedBy,
+	// 			"CommitId":     params.CommitId,
+	// 		},
+	// 	},
+	// 	Type: corev1.SecretTypeDockerConfigJson,
+	// 	StringData: map[string]string{
+	// 		".dockerconfigjson": fmt.Sprintf(`{
+	// 			"auths": {
+	// 				"%s.azurecr.io": {
+	// 					"username": "%s",
+	// 					"password": "%s"
+	// 				}
+	// 			}
+	// 		}`, params.AzureAcrRegistryName, azureCreds.Username, azureCreds.Password),
+	// 	},
+	// }
+
+	// // Create the Docker registry secret in the default Namespace
+	// createdSecret, err := clientset.CoreV1().Secrets("humalect").Create(context.Background(), dockerRegistrySecret, metav1.CreateOptions{})
+	// if err != nil {
+	// 	log.Fatalf("Error creating docker registry secret secret: %v", err)
+	// }
+
+	// log.Printf("Docker Registry Secret %s created in Namespace %s\n", createdSecret.Name, createdSecret.Namespace)
+
+	// return createdSecret.Name, nil
+
+	// } else {
+	// 	return "", nil
+	// }
+	return "", nil
 }
 
 func getOrgAzureCredsForAcr(AzureManagementScopeToken string, AzureAcrRegistryName string, AzureSubscriptionId string, AzureResourceGroupName string) (AzureCreds, error) {
@@ -233,12 +518,16 @@ func getKanikoJobObject(
 	params constants.ParamsConfig,
 ) (batchv1.Job, error) {
 	var artifactsRepoUrl string
-	if params.CloudProvider == constants.CloudIdAzure {
+	if params.CloudProvider == constants.CloudIdAzure || params.RegistryProvider == constants.RegistryIdAzure {
 		artifactsRepoUrl = fmt.Sprintf("%s.azurecr.io/%s:%s", params.AzureAcrRegistryName, params.
 			ArtifactsRepositoryName, params.CommitId)
 	} else if params.CloudProvider == constants.CloudIdAWS {
 		artifactsRepoUrl = fmt.Sprintf("%s/%s:%s", params.AwsEcrRegistryUrl, params.
 			ArtifactsRepositoryName, params.CommitId)
+	} else if params.CloudProvider == constants.CloudIdCivo && params.RegistryProvider == constants.RegistryIdDockerhub {
+		artifactsRepoUrl = fmt.Sprintf("lakshya806/test-kaniko:latest")
+	} else {
+		artifactsRepoUrl = fmt.Sprintf("073328469200.dkr.ecr.ap-south-1.amazonaws.com/lak-test:latest")
 	}
 	gitUrl := getCodeSourceSpecificGitUrl(params)
 	prepareConfigVolumeMounts := []corev1.VolumeMount{
@@ -396,4 +685,182 @@ func createKanikoConfigResources(clientset *kubernetes.Clientset, params constan
 		return CreateJobConfig{}, err
 	}
 	return CreateJobConfig{CloudProviderSecretName: cloudProviderSecretName, DockerFileConfigName: dockerFileConfigName}, nil
+}
+
+func getAwsSecretValue(secretName, accessKey, secretKey, region string) (string, error) {
+	// Create a session object with the access key and secret key
+	sess, err := session.NewSession(&aws.Config{
+		Region:      aws.String(region),
+		Credentials: credentials.NewStaticCredentials(accessKey, secretKey, ""),
+	})
+	if err != nil {
+		fmt.Println("Error creating session:", err)
+		return "", err
+	}
+
+	// Create a Secrets Manager client
+	svc := secretsmanager.New(sess)
+
+	// Call the GetSecretValue API
+	input := &secretsmanager.GetSecretValueInput{
+		SecretId: aws.String(secretName),
+	}
+	result, err := svc.GetSecretValue(input)
+	if err != nil {
+		fmt.Println("Error getting secret value:", err)
+		return "", err
+	}
+
+	// Extract the secret value and return it
+	secretValue := *result.SecretString
+
+	var secretData map[string]string
+	err = json.Unmarshal([]byte(secretValue), &secretData)
+	if err != nil {
+		fmt.Println("Error unmarshalling JSON:", err)
+		return "", err
+	}
+
+	// Return the "dockerhub" key's value
+	return secretData["dockerhub"], nil
+}
+
+func getAzureSecretString(azureVaultToken string, vaultName string, secretName string) (string, error) {
+	// cred, err := azidentity.NewDefaultAzureCredential(nil)
+	// if err != nil {
+	// 	fmt.Println("Error creating Azure Credential:", err)
+	// 	return "", err
+	// }
+	// fmt.Println("Here goes credentials")
+	// fmt.Println(cred)
+
+	// client, err := azsecrets.NewClient(vaultURL, cred, nil)
+	// if err != nil {
+	// 	fmt.Println("Error creating Azure Secret Client:", err)
+	// 	return "", err
+	// }
+
+	// resp, err := client.GetSecret(context.Background(), secretName, "", nil)
+	// if err != nil {
+	// 	fmt.Println("Error retrieving secret value:", err)
+	// 	return "", err
+	// }
+
+	// var secretValue string = *resp.Value
+	// fmt.Println("Secret value goes here", secretValue)
+	client := &http.Client{
+		Timeout: 30 * time.Second,
+	}
+
+	url := fmt.Sprintf("https://%s.vault.azure.net/secrets/%s?api-version=7.3", vaultName, secretName)
+
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return "", fmt.Errorf("error creating request: %v", err)
+	}
+
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", azureVaultToken))
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("error making request: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("error response status code: %d", resp.StatusCode)
+	}
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("error reading response body: %v", err)
+	}
+
+	var responseJSON map[string]interface{}
+	err = json.Unmarshal(body, &responseJSON)
+	if err != nil {
+		return "", fmt.Errorf("error unmarshalling response JSON: %v", err)
+	}
+
+	secretValue, ok := responseJSON["value"].(string)
+	if !ok {
+		return "", fmt.Errorf("value not found in response JSON")
+	}
+
+	return secretValue, nil
+}
+
+func getEcrLoginToken(accessKey string, secretKey string) (string, error) {
+
+	sess, err := session.NewSession(&aws.Config{
+		Region:      aws.String("ap-south-1"),
+		Credentials: credentials.NewStaticCredentials(accessKey, secretKey, ""),
+	})
+	if err != nil {
+		fmt.Println("Error creating session:", err)
+		return "", err
+	}
+
+	ecrClient := ecr.New(sess)
+
+	result, err := ecrClient.GetAuthorizationToken(&ecr.GetAuthorizationTokenInput{})
+	if err != nil {
+		fmt.Println("Error getting ECR authorization token:", err)
+		return "", err
+	}
+
+	decodedToken, err := base64.StdEncoding.DecodeString(*result.AuthorizationData[0].AuthorizationToken)
+	if err != nil {
+		fmt.Println("Error decoding ECR authorization token:", err)
+		return "", err
+	}
+
+	password := strings.Split(string(decodedToken), ":")[1]
+	fmt.Println("ECR login password:", password)
+
+	return password, nil
+}
+
+func getDockerHubSecretKey(params constants.ParamsConfig) (string, error) {
+
+	var dockerHubCreds map[string]interface{}
+	err := json.Unmarshal([]byte(params.DockerHubCredentials), &dockerHubCreds)
+
+	if err != nil {
+		log.Fatalf("Failed to parse ECR credentials got error : %v", err)
+		return "", err
+	}
+
+	if params.SecretsProvider == constants.CloudIdAWS {
+
+		var awsCreds map[string]interface{}
+		err := json.Unmarshal([]byte(params.AwsSecretCredentials), &awsCreds)
+
+		if err != nil {
+			log.Fatalf("Failed to parse Aws credentials got error : %v", err)
+			return "", err
+		}
+		return getAwsSecretValue(dockerHubCreds["secretName"].(string), awsCreds["awsTempAccessKey"].(string), awsCreds["awsTempSecretKey"].(string), awsCreds["awsRegion"].(string))
+	} else if params.SecretsProvider == constants.CloudIdAzure {
+
+		var azureCreds map[string]interface{}
+		err := json.Unmarshal([]byte(params.AzureSecretCredentials), &azureCreds)
+
+		if err != nil {
+			log.Fatalf("Failed to parse Aws credentials got error : %v", err)
+			return "", err
+		}
+		secretData, err := getAzureSecretString(azureCreds["azureVaulttoken"].(string), azureCreds["azureVaultName"].(string), dockerHubCreds["secretName"].(string))
+		// secretData, err := getAzureSecretString(params.AzureVaultToken, params.AzureVaultName, dockerHubCreds["secretName"].(string))
+
+		if err != nil {
+			log.Fatalf("Error getting dockerhub secret: %v", err)
+			return "", err
+		}
+
+		return secretData, nil
+
+	} else {
+		return "", errors.New("No credentials provided")
+	}
 }
