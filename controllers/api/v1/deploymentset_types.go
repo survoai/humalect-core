@@ -24,7 +24,43 @@ import (
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
 // DeploymentSetSpec defines the desired state of DeploymentSet
+
+type EcrCredentials struct {
+	AWSTempAccessKey string `json:"awsTempAccessKey,omitempty"`
+	AWSTempSecretKey string `json:"awsTempSecretKey,omitempty"`
+}
+
+type DockerHubCredentials struct {
+	Username   string `json:"username,omitempty"`
+	SecretName string `json:"secretName,omitempty"`
+}
+
+type AcrCredentials struct {
+	AzureManagementScopeToken string `json:"azureManagementScopeToken,omitempty"`
+	AzureAcrRegistryName      string `json:"azureAcrRegistryName,omitempty"`
+	AzureSubscriptionId       string `json:"azureSubscriptionId,omitempty"`
+	AzureResourceGroupName    string `json:"azureResourceGroupName,omitempty"`
+}
+
+type AwsSecretCredentials struct {
+	AWSTempAccessKey string `json:"awsTempAccessKey,omitempty"`
+	AWSTempSecretKey string `json:"awsTempSecretKey,omitempty"`
+	AWSRegion        string `json:"awsRegion,omitempty"`
+}
+
+type AzureSecretCredentials struct {
+	AzureVaultToken string `json:"azureVaulttoken,omitempty"`
+	AzureVaultName  string `json:"azureVaultName,omitempty"`
+}
+
 type DeploymentSetSpec struct {
+	RegistryProvider          string                     `json:"registryProvider,omitempty"`
+	SecretsProvider           string                     `json:"secretsProvider,omitempty"`
+	EcrCredentials            EcrCredentials             `json:"ecrCredentials,omitempty"`
+	DockerHubCredentials      DockerHubCredentials       `json:"dockerHubCredentials,omitempty"`
+	AcrCredentials            AcrCredentials             `json:"acrCredentials,omitempty"`
+	AwsSecretCredentials      AwsSecretCredentials       `json:"awsSecretCredentials,omitempty"`
+	AzureSecretCredentials    AzureSecretCredentials     `json:"azureSecretCredentials,omitempty"`
 	CommitId                  string                     `json:"commitId,omitempty"`
 	SourceCodeToken           string                     `json:"sourceCodeToken,omitempty"`
 	CloudRegion               string                     `json:"cloudRegion,omitempty"`

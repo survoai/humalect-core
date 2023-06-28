@@ -27,7 +27,43 @@ type IngressYamlManifestType struct {
 	Metadata metav1.ObjectMeta        `json:"metadata"`
 	Spec     networkingv1.IngressSpec `json:"spec"`
 }
+
+type EcrCredentials struct {
+	AWSTempAccessKey string `json:"awsTempAccessKey,omitempty"`
+	AWSTempSecretKey string `json:"awsTempSecretKey,omitempty"`
+}
+
+type DockerHubCredentials struct {
+	Username   string `json:"username,omitempty"`
+	SecretName string `json:"secretName,omitempty"`
+}
+
+type AcrCredentials struct {
+	AzureManagementScopeToken string `json:"azureManagementScopeToken,omitempty"`
+	AzureAcrRegistryName      string `json:"azureAcrRegistryName,omitempty"`
+	AzureSubscriptionId       string `json:"azureSubscriptionId,omitempty"`
+	AzureResourceGroupName    string `json:"azureResourceGroupName,omitempty"`
+}
+
+type AwsSecretCredentials struct {
+	AWSTempAccessKey string `json:"awsTempAccessKey,omitempty"`
+	AWSTempSecretKey string `json:"awsTempSecretKey,omitempty"`
+	AWSRegion        string `json:"awsRegion,omitempty"`
+}
+
+type AzureSecretCredentials struct {
+	AzureVaultToken string `json:"azureVaulttoken,omitempty"`
+	AzureVaultName  string `json:"azureVaultName,omitempty"`
+}
+
 type ParamsConfig struct {
+	SecretsProvider           string
+	EcrCredentials            string
+	DockerHubCredentials      string
+	AcrCredentials            string
+	AwsSecretCredentials      string
+	AzureSecretCredentials    string
+	RegistryProvider          string
 	CloudProvider             string
 	AzureManagementScopeToken string
 	SourceCodeRepositoryName  string
@@ -60,6 +96,10 @@ type ParamsConfig struct {
 }
 
 const (
+	RegistryIdAWS                     = "ecr"
+	RegistryIdAzure                   = "acr"
+	RegistryIdDockerhub               = "dockerhub"
+	CloudIdCivo                       = "civo"
 	CloudIdAzure                      = "azure"
 	CloudIdAWS                        = "aws"
 	KanikoWorkspaceName               = "workspace"

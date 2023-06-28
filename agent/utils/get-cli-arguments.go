@@ -8,11 +8,18 @@ import (
 
 func ParseCLIArguments() *constants.ParamsConfig {
 	config := &constants.ParamsConfig{}
+	flag.StringVar(&config.SecretsProvider, "secretsProvider", "", "This is a required parameter which can have 2 values either aws or azure and it represents the main secrets provider to be used.")
+	flag.StringVar(&config.EcrCredentials, "ecrCredentials", "", "This is an optional parameter and it would only be passed when the registryProvider is aws and it represents the credentials for the AWS ECR registry.")
+	flag.StringVar(&config.DockerHubCredentials, "dockerHubCredentials", "", "This is an optional parameter and it would only be passed when the registryProvider is dockerhub and it represents the credentials for the dockerhub registry.")
+	flag.StringVar(&config.AcrCredentials, "acrCredentials", "", "This is an optional parameter and it would only be passed when the registryProvider is azure and it represents the credentials for the Azure ACR registry.")
+	flag.StringVar(&config.AwsSecretCredentials, "awsSecretCredentials", "", "This is an optional parameter and it would only be passed when the registryProvider is aws and it represents the credentials for the AWS ECR registry.")
+	flag.StringVar(&config.AzureSecretCredentials, "azureSecretCredentials", "", "This is an optional parameter and it would only be passed when the registryProvider is azure and it represents the credentials for the Azure ACR registry.")
 	flag.StringVar(&config.CloudProvider, "cloudProvider", "", "This is a required parameter which can have 2 values either aws or azure and it represents the main cloud provider to be used.")
 	flag.StringVar(&config.AzureManagementScopeToken, "azureManagementScopeToken", "", "This is the optional parameter which shows the token of Azure for https://management.azure.com/.default scope and this would only be passed when the cloudProvider is azure.")
 	flag.StringVar(&config.SourceCodeRepositoryName, "sourceCodeRepositoryName", "", "The repository name of your github, gitlab or bitbucket repository")
 	flag.StringVar(&config.SourceCodeProvider, "sourceCodeProvider", "", "This is a required parameter that represents the name of the version control system portal and it could be either github  or gitlab or bitbucket")
 	flag.StringVar(&config.SourceCodeToken, "sourceCodeToken", "", "This is a required parameter that represents the token to pull the source code from the version control system portal namely github, gitlab and bitbucket.")
+	flag.StringVar(&config.RegistryProvider, "registryProvider", "", "This is a required parameter that represents the name of the docker registry provider and it could be either dockerhub or azure or aws.")
 	flag.StringVar(&config.SourceCodeOrgName, "sourceCodeOrgName", "", "This is a required parameter that represents the organization or user name for the version control system portal namely github, gitlab and bitbucket.")
 	flag.StringVar(&config.CommitId, "commitId", "", "This is a required parameter that represents the commitId for the version control system portal namely github, gitlab and bitbucket.")
 	flag.StringVar(&config.DockerManifest, "dockerManifest", "", "This is a required parameter and this represents the docker file for the source code that is to be used to build docker image. It is an array of strings with each string representing a line in the dockerfile.")

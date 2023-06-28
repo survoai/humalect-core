@@ -57,6 +57,51 @@ spec:
                   type: string
                 deploymentId:
                   type: string
+                ecrCredentials:
+                  properties:
+                    awsTempAccessKey:
+                      type: string
+                    awsTempSecretKey:
+                      type: string
+                  type: object
+                dockerHubCredentials:
+                  properties:
+                    username:
+                      type: string
+                    secretName:
+                      type: string
+                  type: object
+                acrCredentials:
+                  properties:
+                    azureManagementScopeToken:
+                      type: string
+                    azureSubscriptionId:
+                      type: string
+                    azureResourceGroupName:
+                      type: string
+                    azureAcrRegistryName:
+                      type: string
+                  type: object
+                awsSecretCredentials:
+                  properties:
+                    awsTempAccessKey:
+                      type: string
+                    awsTempSecretKey:
+                      type: string
+                    awsRegion:
+                      type: string
+                  type: object
+                azureSecretCredentials:
+                  properties:
+                    AzureVaultToken:
+                      type: string
+                    AzureVaultName:
+                      type: string
+                  type: object
+                secretsProvider:
+                  type: string
+                registryProvider: 
+                  type: string
                 deploymentYamlManifest:
                   properties:
                     metadata:

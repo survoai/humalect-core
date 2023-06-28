@@ -32,6 +32,8 @@ func GetCloudSecretMap(azureVaultToken string, secretName string, region string,
 			log.Fatal(err.Error())
 			return map[string]string{}, err
 		}
+	} else if cloudId == constants.CloudIdCivo {
+
 	} else {
 		return map[string]string{}, errors.New("Invalid Cloud Id for secrets")
 	}
