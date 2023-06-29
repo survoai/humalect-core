@@ -29,8 +29,9 @@ type IngressYamlManifestType struct {
 }
 
 type EcrCredentials struct {
-	AccessKey string `json:"accessKey,omitempty"`
-	SecretKey string `json:"secretKey,omitempty"`
+	AccessKey   string `json:"accessKey,omitempty"`
+	SecretKey   string `json:"secretKey,omitempty"`
+	RegistryUrl string `json:"registryUrl,omitempty"`
 }
 
 type DockerHubCredentials struct {

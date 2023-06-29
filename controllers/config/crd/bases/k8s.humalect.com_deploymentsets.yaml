@@ -63,6 +63,8 @@ spec:
                       type: string
                     secretKey:
                       type: string
+                    regitryUrl:
+                      type: string
                   type: object
                 dockerHubCredentials:
                   properties:
