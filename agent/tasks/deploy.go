@@ -3,7 +3,6 @@ package tasks
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 
 	"github.com/Humalect/humalect-core/agent/constants"
 	"github.com/Humalect/humalect-core/agent/services"
@@ -39,8 +38,6 @@ func Deploy(config *constants.ParamsConfig) error {
 	// 	fmt.Println(err)
 	// 	return err
 	// }
-	log.Println("Creating Docker Registry Secret AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
-	fmt.Println("Creating Docker  dfas gRegistry Se sagcret AAAAAsdgadbAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
 
 	kanikoJobResources, err := services.CreateKanikoJob(*config)
 	if err != nil {
