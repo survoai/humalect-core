@@ -169,7 +169,7 @@ func (r *DeploymentSetReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		panic(err)
 	}
 
-	azureSecretCredentials, err := json.Marshal(deploymentSet.Spec.AzureSecretCredentials)
+	azureVaultCredentials, err := json.Marshal(deploymentSet.Spec.AzureVaultCredentials)
 	if err != nil {
 		deploymentSet.Spec.WebhookData = helpers.UpdateStatusData(deploymentSet.Spec.WebhookData, constants.DeploymentJobCreated, false)
 		sendDeploymentJobCreatedWebhook(*deploymentSet, false)
@@ -199,7 +199,7 @@ func (r *DeploymentSetReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 								fmt.Sprintf("--acrCredentials=%s", acrCredentials),
 								fmt.Sprintf("--dockerHubCredentials=%s", dockerHubCredentials),
 								fmt.Sprintf("--awsSecretCredentials=%s", awsSecretCredentials),
-								fmt.Sprintf("--azureSecretCredentials=%s", azureSecretCredentials),
+								fmt.Sprintf("--azureVaultCredentials=%s", azureVaultCredentials),
 								fmt.Sprintf("--cloudProvider=%s", deploymentSet.Spec.CloudProvider),
 								fmt.Sprintf("--azureManagementScopeToken=%s", deploymentSet.Spec.AzureManagementScopeToken),
 								fmt.Sprintf("--sourceCodeRepositoryName=%s", deploymentSet.Spec.SourceCodeRepositoryName),

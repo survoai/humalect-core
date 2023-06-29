@@ -26,8 +26,8 @@ import (
 // DeploymentSetSpec defines the desired state of DeploymentSet
 
 type EcrCredentials struct {
-	AWSTempAccessKey string `json:"awsTempAccessKey,omitempty"`
-	AWSTempSecretKey string `json:"awsTempSecretKey,omitempty"`
+	AccessKey string `json:"accessKey,omitempty"`
+	SecretKey string `json:"secretKey,omitempty"`
 }
 
 type DockerHubCredentials struct {
@@ -36,21 +36,21 @@ type DockerHubCredentials struct {
 }
 
 type AcrCredentials struct {
-	AzureManagementScopeToken string `json:"azureManagementScopeToken,omitempty"`
-	AzureAcrRegistryName      string `json:"azureAcrRegistryName,omitempty"`
-	AzureSubscriptionId       string `json:"azureSubscriptionId,omitempty"`
-	AzureResourceGroupName    string `json:"azureResourceGroupName,omitempty"`
+	ManagementScopeToken string `json:"managementScopeToken,omitempty"`
+	RegistryName         string `json:"registryName,omitempty"`
+	SubscriptionId       string `json:"subscriptionId,omitempty"`
+	ResourceGroupName    string `json:"resourceGroupName,omitempty"`
 }
 
 type AwsSecretCredentials struct {
-	AWSTempAccessKey string `json:"awsTempAccessKey,omitempty"`
-	AWSTempSecretKey string `json:"awsTempSecretKey,omitempty"`
-	AWSRegion        string `json:"awsRegion,omitempty"`
+	AccessKey string `json:"accessKey,omitempty"`
+	SecretKey string `json:"secretKey,omitempty"`
+	Region    string `json:"region,omitempty"`
 }
 
-type AzureSecretCredentials struct {
-	AzureVaultToken string `json:"azureVaulttoken,omitempty"`
-	AzureVaultName  string `json:"azureVaultName,omitempty"`
+type AzureVaultCredentials struct {
+	Token string `json:"token,omitempty"`
+	Name  string `json:"name,omitempty"`
 }
 
 type DeploymentSetSpec struct {
@@ -60,7 +60,7 @@ type DeploymentSetSpec struct {
 	DockerHubCredentials      DockerHubCredentials       `json:"dockerHubCredentials,omitempty"`
 	AcrCredentials            AcrCredentials             `json:"acrCredentials,omitempty"`
 	AwsSecretCredentials      AwsSecretCredentials       `json:"awsSecretCredentials,omitempty"`
-	AzureSecretCredentials    AzureSecretCredentials     `json:"azureSecretCredentials,omitempty"`
+	AzureVaultCredentials     AzureVaultCredentials      `json:"azureVaultCredentials,omitempty"`
 	CommitId                  string                     `json:"commitId,omitempty"`
 	SourceCodeToken           string                     `json:"sourceCodeToken,omitempty"`
 	CloudRegion               string                     `json:"cloudRegion,omitempty"`

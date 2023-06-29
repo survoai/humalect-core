@@ -47,7 +47,9 @@ func (r *ApplicationReconciler) handleCreation(ctx context.Context, application 
 			},
 			Namespace: Namespace,
 		}
-		SecretStringData, err := cloudhelpers.GetCloudSecretMap(application.Spec.SecretsProvider, application.Spec.AwsSecretCredentials.AWSTempAccessKey, application.Spec.AwsSecretCredentials.AWSTempSecretKey, application.Spec.AwsSecretCredentials.AWSRegion, application.Spec.AzureVaultToken, application.Spec.SecretManagerName, application.Spec.CloudRegion, application.Spec.AzureVaultName, application.Spec.CloudProvider)
+		SecretStringData, err := cloudhelpers.GetCloudSecretMap(application.Spec.SecretsProvider, application.Spec.AwsSecretCredentials.AccessKey,
+			application.Spec.AwsSecretCredentials.SecretKey, application.Spec.AwsSecretCredentials.Region, application.Spec.AzureVaultCredentials.Token,
+			application.Spec.SecretManagerName, application.Spec.CloudRegion, application.Spec.AzureVaultCredentials.Name, application.Spec.CloudProvider)
 		if err != nil {
 			log.Fatal(err.Error())
 			application.Spec.WebhookData = helpers.UpdateStatusData(application.Spec.WebhookData, constants.CreatedKubernetesResources, false)

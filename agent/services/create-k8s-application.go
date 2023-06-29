@@ -14,7 +14,7 @@ import (
 	"k8s.io/client-go/dynamic"
 )
 
-func CreateK8sApplication(secretsProvider string, awsSecretCredentials constants.AwsSecretCredentials, azureSecretCredentials constants.AzureSecretCredentials, k8sAppName string, managedBy string, cloudRegion string, cloudProvider string,
+func CreateK8sApplication(secretsProvider string, awsSecretCredentials constants.AwsSecretCredentials, azureVaultCredentials constants.AzureVaultCredentials, k8sAppName string, managedBy string, cloudRegion string, cloudProvider string,
 	k8sResourcesIdentifier string, deploymentYamlManifest constants.DeploymentYamlManifestType, serviceYamlManifest constants.ServiceYamlManifestType, ingressYamlManifest constants.IngressYamlManifestType, secretManagerName string, azureVaultToken string, azureVaultName string, namespace string, webhookEndpoint string, webhookData string, deploymentId string,
 ) (string, error) {
 	// var kubeconfig *string
@@ -61,7 +61,7 @@ func CreateK8sApplication(secretsProvider string, awsSecretCredentials constants
 			"spec": map[string]interface{}{
 				"secretsProvider":        secretsProvider,
 				"awsSecretCredentials":   awsSecretCredentials,
-				"azureSecretCredentials": azureSecretCredentials,
+				"azureVaultCredentials":  azureVaultCredentials,
 				"cloudRegion":            cloudRegion,
 				"cloudProvider":          cloudProvider,
 				"k8sResourcesIdentifier": k8sResourcesIdentifier,

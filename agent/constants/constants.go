@@ -29,8 +29,8 @@ type IngressYamlManifestType struct {
 }
 
 type EcrCredentials struct {
-	AWSTempAccessKey string `json:"awsTempAccessKey,omitempty"`
-	AWSTempSecretKey string `json:"awsTempSecretKey,omitempty"`
+	AccessKey string `json:"accessKey,omitempty"`
+	SecretKey string `json:"secretKey,omitempty"`
 }
 
 type DockerHubCredentials struct {
@@ -39,21 +39,21 @@ type DockerHubCredentials struct {
 }
 
 type AcrCredentials struct {
-	AzureManagementScopeToken string `json:"azureManagementScopeToken,omitempty"`
-	AzureAcrRegistryName      string `json:"azureAcrRegistryName,omitempty"`
-	AzureSubscriptionId       string `json:"azureSubscriptionId,omitempty"`
-	AzureResourceGroupName    string `json:"azureResourceGroupName,omitempty"`
+	ManagementScopeToken string `json:"managementScopeToken,omitempty"`
+	RegistryName         string `json:"registryName,omitempty"`
+	SubscriptionId       string `json:"subscriptionId,omitempty"`
+	ResourceGroupName    string `json:"resourceGroupName,omitempty"`
 }
 
 type AwsSecretCredentials struct {
-	AWSTempAccessKey string `json:"awsTempAccessKey,omitempty"`
-	AWSTempSecretKey string `json:"awsTempSecretKey,omitempty"`
-	AWSRegion        string `json:"awsRegion,omitempty"`
+	AccessKey string `json:"accessKey,omitempty"`
+	SecretKey string `json:"secretKey,omitempty"`
+	Region    string `json:"region,omitempty"`
 }
 
-type AzureSecretCredentials struct {
-	AzureVaultToken string `json:"azureVaulttoken,omitempty"`
-	AzureVaultName  string `json:"azureVaultName,omitempty"`
+type AzureVaultCredentials struct {
+	Token string `json:"token,omitempty"`
+	Name  string `json:"name,omitempty"`
 }
 
 type ParamsConfig struct {
@@ -62,7 +62,7 @@ type ParamsConfig struct {
 	DockerHubCredentials      string
 	AcrCredentials            string
 	AwsSecretCredentials      string
-	AzureSecretCredentials    string
+	AzureVaultCredentials     string
 	RegistryProvider          string
 	CloudProvider             string
 	AzureManagementScopeToken string
