@@ -100,7 +100,7 @@ spec:
                   type: object
                 secretsProvider:
                   type: string
-                registryProvider: 
+                artifactsRegistryProvider: 
                   type: string
                 deploymentYamlManifest:
                   properties:
