@@ -17,7 +17,9 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
 )
 
-func GetCloudSecretMap(secretsProvider string, awsTempAccessKey string, awsTempSecretKey string, awsRegion string, azureVaultToken string, secretName string, region string, vaultName string, cloudId string) (map[string]string, error) {
+func GetCloudSecretMap(secretsProvider string, awsAccessKey string, awsSecretKey string,
+	awsRegion string, azureVaultToken string, secretName string, region string, vaultName string,
+	cloudId string) (map[string]string, error) {
 	var secretsMap map[string]string
 	var secretString string
 	var err error
@@ -41,7 +43,7 @@ func GetCloudSecretMap(secretsProvider string, awsTempAccessKey string, awsTempS
 		}
 	} else if cloudId == constants.CloudIdCivo && secretsProvider == constants.CloudIdAWS {
 		// Load custom configuration
-		config, err := config.LoadDefaultConfig(context.TODO(), config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(awsTempAccessKey, awsTempSecretKey, "")))
+		config, err := config.LoadDefaultConfig(context.TODO(), config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(awsAccessKey, awsSecretKey, "")))
 		if err != nil {
 			log.Fatal(err)
 			return map[string]string{}, err

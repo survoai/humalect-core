@@ -29,18 +29,18 @@ spec:
               properties:
                 awsSecretCredentials:
                   properties:
-                    awsTempAccessKey:
+                    accessKey:
                       type: string
-                    awsTempSecretKey:
+                    secretKey:
                       type: string
-                    awsRegion:
+                    region:
                       type: string
                   type: object
-                azureSecretCredentials:
+                azureVaultCredentials:
                   properties:
-                    AzureVaultToken:
+                    token:
                       type: string
-                    AzureVaultName:
+                    name:
                       type: string
                   type: object
                 secretsProvider:

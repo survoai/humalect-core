@@ -46,7 +46,7 @@ type ApplicationSpec struct {
 	// Important: Run "make" to regenerate code after modifying this file
 
 	AwsSecretCredentials   AwsSecretCredentials       `json:"awsSecretCredentials,omitempty"`
-	AzureSecretCredentials AzureSecretCredentials     `json:"azureSecretCredentials,omitempty"`
+	AzureVaultCredentials  AzureVaultCredentials      `json:"azureVaultCredentials,omitempty"`
 	CloudRegion            string                     `json:"cloudRegion,omitempty"`
 	SecretsProvider        string                     `json:"secretsProvider,omitempty"`
 	CloudProvider          string                     `json:"cloudProvider,omitempty"`

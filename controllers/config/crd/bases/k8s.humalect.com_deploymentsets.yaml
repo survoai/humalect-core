@@ -59,9 +59,9 @@ spec:
                   type: string
                 ecrCredentials:
                   properties:
-                    awsTempAccessKey:
+                    accessKey:
                       type: string
-                    awsTempSecretKey:
+                    secretKey:
                       type: string
                   type: object
                 dockerHubCredentials:
@@ -73,29 +73,29 @@ spec:
                   type: object
                 acrCredentials:
                   properties:
-                    azureManagementScopeToken:
+                    managementScopeToken:
                       type: string
-                    azureSubscriptionId:
+                    subscriptionId:
                       type: string
-                    azureResourceGroupName:
+                    resourceGroupName:
                       type: string
-                    azureAcrRegistryName:
+                    registryName:
                       type: string
                   type: object
                 awsSecretCredentials:
                   properties:
-                    awsTempAccessKey:
+                    accessKey:
                       type: string
-                    awsTempSecretKey:
+                    secretKey:
                       type: string
-                    awsRegion:
+                    region:
                       type: string
                   type: object
-                azureSecretCredentials:
+                azureVaultCredentials:
                   properties:
-                    AzureVaultToken:
+                    token:
                       type: string
-                    AzureVaultName:
+                    name:
                       type: string
                   type: object
                 secretsProvider:

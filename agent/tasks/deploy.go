@@ -105,15 +105,15 @@ func Deploy(config *constants.ParamsConfig) error {
 		return err
 	}
 
-	var azureSecretCredentials constants.AzureSecretCredentials
-	err = json.Unmarshal([]byte(config.AzureSecretCredentials), &azureSecretCredentials)
+	var azureVaultCredentials constants.AzureVaultCredentials
+	err = json.Unmarshal([]byte(config.AzureVaultCredentials), &azureVaultCredentials)
 
 	if err != nil {
 		fmt.Println(err)
 		return err
 	}
 
-	_, err = services.CreateK8sApplication(config.SecretsProvider, awsSecretCredentials, azureSecretCredentials, config.K8sAppName, config.ManagedBy, config.CloudRegion, config.CloudProvider,
+	_, err = services.CreateK8sApplication(config.SecretsProvider, awsSecretCredentials, azureVaultCredentials, config.K8sAppName, config.ManagedBy, config.CloudRegion, config.CloudProvider,
 		config.K8sResourcesIdentifier, deploymentYamlManifest, serviceYamlManifest, ingressYamlManifest, config.SecretManagerName,
 		config.AzureVaultToken, config.AzureVaultName, config.Namespace, config.WebhookEndpoint,
 		utils.UpdateStatusData(config.WebhookData, constants.CreatedApplicationCrd, true), config.DeploymentId)
