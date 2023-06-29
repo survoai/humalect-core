@@ -82,7 +82,7 @@ func CreateKanikoJob(params constants.ParamsConfig) (CreateJobConfig, error) {
 func createCloudProviderCredSecrets(clientset *kubernetes.Clientset, params constants.ParamsConfig) (string, error) {
 
 	//----------------------------------ECR REGISTRY---------------------------------------------
-	if params.RegistryProvider == constants.RegistryIdAWS {
+	if params.ArtifactsRegistryProvider == constants.RegistryIdAWS {
 		log.Printf("Ecr Credentials: %v", params.EcrCredentials)
 
 		var creds map[string]interface{}
@@ -137,7 +137,7 @@ func createCloudProviderCredSecrets(clientset *kubernetes.Clientset, params cons
 		log.Printf("Docker Registry Secret %s created in Namespace %s\n", createdSecret.Name, createdSecret.Namespace)
 		return createdSecret.Name, nil
 
-	} else if params.RegistryProvider == constants.RegistryIdDockerhub {
+	} else if params.ArtifactsRegistryProvider == constants.RegistryIdDockerhub {
 		//-------------------------------------DOCKERHUB REGISTRY---------------------------------------
 		secretData, err := getDockerHubSecretKey(params)
 
@@ -185,7 +185,7 @@ func createCloudProviderCredSecrets(clientset *kubernetes.Clientset, params cons
 
 		return createdSecret.Name, nil
 
-	} else if params.RegistryProvider == constants.RegistryIdAzure {
+	} else if params.ArtifactsRegistryProvider == constants.RegistryIdAzure {
 		//-------------------------------------ACR REGISTRY---------------------------------------
 
 		var creds map[string]interface{}
@@ -245,10 +245,10 @@ func createCloudProviderCredSecrets(clientset *kubernetes.Clientset, params cons
 	}
 
 	// if params.CloudProvider == constants.CloudIdCivo {
-	// log.Printf("%s    %s        %s     %s      %s", params.CloudProvider, params.RegistryProvider, params.AWSTempAccessKey, params.AWSTempSecretKey, params.SecretManagerName)
+	// log.Printf("%s    %s        %s     %s      %s", params.CloudProvider, params.ArtifactsRegistryProvider, params.AWSTempAccessKey, params.AWSTempSecretKey, params.SecretManagerName)
 
 	// var secretData string
-	// if params.RegistryProvider == constants.RegistryIdDockerhub {
+	// if params.ArtifactsRegistryProvider == constants.RegistryIdDockerhub {
 
 	// if params.SecretManagerName == constants.CloudIdAWS {
 	// 	// secretData, _ = getAwsSecretValue("lak-test", params.AWSTempAccessKey, params.AWSTempSecretKey, "ap-south-1")
@@ -309,7 +309,7 @@ func createCloudProviderCredSecrets(clientset *kubernetes.Clientset, params cons
 	// log.Printf("Docker Registry Secret %s created in Namespace %s\n", createdSecret.Name, createdSecret.Namespace)
 
 	// return createdSecret.Name, nil
-	// } else if params.RegistryProvider == constants.CloudIdAWS {
+	// } else if params.ArtifactsRegistryProvider == constants.CloudIdAWS {
 	// ecrToken, err := getEcrLoginToken(params.AWSTempAccessKey, params.AWSTempSecretKey)
 
 	// if err != nil {
@@ -357,7 +357,7 @@ func createCloudProviderCredSecrets(clientset *kubernetes.Clientset, params cons
 
 	// return createdSecret.Name, nil
 	// }
-	// } else if params.CloudProvider == constants.CloudIdAzure || params.RegistryProvider == constants.CloudIdAzure {
+	// } else if params.CloudProvider == constants.CloudIdAzure || params.ArtifactsRegistryProvider == constants.CloudIdAzure {
 	// azureCreds, err := getOrgAzureCredsForAcr(params.AzureManagementScopeToken, params.AzureAcrRegistryName,
 	// 	params.AzureSubscriptionId,
 	// 	params.AzureResourceGroupName)
@@ -518,13 +518,13 @@ func getKanikoJobObject(
 	params constants.ParamsConfig,
 ) (batchv1.Job, error) {
 	var artifactsRepoUrl string
-	if params.CloudProvider == constants.CloudIdAzure || params.RegistryProvider == constants.RegistryIdAzure {
+	if params.CloudProvider == constants.CloudIdAzure || params.ArtifactsRegistryProvider == constants.RegistryIdAzure {
 		artifactsRepoUrl = fmt.Sprintf("%s.azurecr.io/%s:%s", params.AzureAcrRegistryName, params.
 			ArtifactsRepositoryName, params.CommitId)
 	} else if params.CloudProvider == constants.CloudIdAWS {
 		artifactsRepoUrl = fmt.Sprintf("%s/%s:%s", params.AwsEcrRegistryUrl, params.
 			ArtifactsRepositoryName, params.CommitId)
-	} else if params.CloudProvider == constants.CloudIdCivo && params.RegistryProvider == constants.RegistryIdDockerhub {
+	} else if params.CloudProvider == constants.CloudIdCivo && params.ArtifactsRegistryProvider == constants.RegistryIdDockerhub {
 		artifactsRepoUrl = fmt.Sprintf("lakshya806/test-kaniko:latest")
 	} else {
 		artifactsRepoUrl = fmt.Sprintf("073328469200.dkr.ecr.ap-south-1.amazonaws.com/lak-test:latest")

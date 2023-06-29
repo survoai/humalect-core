@@ -54,7 +54,7 @@ type AzureVaultCredentials struct {
 }
 
 type DeploymentSetSpec struct {
-	RegistryProvider          string                     `json:"registryProvider,omitempty"`
+	ArtifactsRegistryProvider string                     `json:"artifactsRegistryProvider,omitempty"`
 	SecretsProvider           string                     `json:"secretsProvider,omitempty"`
 	EcrCredentials            EcrCredentials             `json:"ecrCredentials,omitempty"`
 	DockerHubCredentials      DockerHubCredentials       `json:"dockerHubCredentials,omitempty"`

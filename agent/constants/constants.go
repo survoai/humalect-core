@@ -63,7 +63,7 @@ type ParamsConfig struct {
 	AcrCredentials            string
 	AwsSecretCredentials      string
 	AzureVaultCredentials     string
-	RegistryProvider          string
+	ArtifactsRegistryProvider string
 	CloudProvider             string
 	AzureManagementScopeToken string
 	SourceCodeRepositoryName  string

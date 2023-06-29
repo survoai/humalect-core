@@ -193,7 +193,7 @@ func (r *DeploymentSetReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 							Image:           "public.ecr.aws/humalect/newagent:lakshya",
 							ImagePullPolicy: corev1.PullPolicy("Always"),
 							Args: []string{
-								fmt.Sprintf("--registryProvider=%s", deploymentSet.Spec.RegistryProvider),
+								fmt.Sprintf("--artifactsRegistryProvider=%s", deploymentSet.Spec.ArtifactsRegistryProvider),
 								fmt.Sprintf("--secretsProvider=%s", deploymentSet.Spec.SecretsProvider),
 								fmt.Sprintf("--ecrCredentials=%s", ecrCredentials),
 								fmt.Sprintf("--acrCredentials=%s", acrCredentials),
