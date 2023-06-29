@@ -13,26 +13,41 @@ import (
 	constants "github.com/Humalect/humalect-core/internal/controller/constants"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
 )
 
-func GetCloudSecretMap(azureVaultToken string, secretName string, region string, vaultName string, cloudId string) (map[string]string, error) {
+func GetCloudSecretMap(secretsProvider string, awsTempAccessKey string, awsTempSecretKey string, awsRegion string, azureVaultToken string, secretName string, region string, vaultName string, cloudId string) (map[string]string, error) {
 	var secretsMap map[string]string
 	var secretString string
 	var err error
 	if cloudId == constants.CloudIdAWS {
-		secretString, err = getAwsSecretString(secretName, region)
+		config, err := config.LoadDefaultConfig(context.TODO(), config.WithRegion(region))
+		if err != nil {
+			log.Fatal(err)
+			return map[string]string{}, err
+		}
+
+		secretString, err = getAwsSecretString(config, secretName, region)
 		if err != nil {
 			log.Fatal(err.Error())
 			return map[string]string{}, err
 		}
-	} else if cloudId == constants.CloudIdAzure {
+	} else if cloudId == constants.CloudIdAzure || secretsProvider == constants.CloudIdAzure {
 		secretString, err = getAzureSecretString(azureVaultToken, vaultName, secretName)
 		if err != nil {
 			log.Fatal(err.Error())
 			return map[string]string{}, err
 		}
-	} else if cloudId == constants.CloudIdCivo {
+	} else if cloudId == constants.CloudIdCivo && secretsProvider == constants.CloudIdAWS {
+		// Load custom configuration
+		config, err := config.LoadDefaultConfig(context.TODO(), config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(awsTempAccessKey, awsTempSecretKey, "")))
+		if err != nil {
+			log.Fatal(err)
+			return map[string]string{}, err
+		}
+
+		secretString, err = getAwsSecretString(config, secretName, awsRegion)
 
 	} else {
 		return map[string]string{}, errors.New("Invalid Cloud Id for secrets")
@@ -45,12 +60,7 @@ func GetCloudSecretMap(azureVaultToken string, secretName string, region string,
 	return secretsMap, nil
 }
 
-func getAwsSecretString(secretName string, region string) (string, error) {
-	config, err := config.LoadDefaultConfig(context.TODO(), config.WithRegion(region))
-	if err != nil {
-		log.Fatal(err)
-		return "", err
-	}
+func getAwsSecretString(config aws.Config, secretName string, region string) (string, error) {
 
 	// Create Secrets Manager client
 	svc := secretsmanager.NewFromConfig(config)

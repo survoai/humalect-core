@@ -40,11 +40,15 @@ type IngressYamlManifestType struct {
 	Metadata metav1.ObjectMeta        `json:"metadata"`
 	Spec     networkingv1.IngressSpec `json:"spec"`
 }
+
 type ApplicationSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
+	AwsSecretCredentials   AwsSecretCredentials       `json:"awsSecretCredentials,omitempty"`
+	AzureSecretCredentials AzureSecretCredentials     `json:"azureSecretCredentials,omitempty"`
 	CloudRegion            string                     `json:"cloudRegion,omitempty"`
+	SecretsProvider        string                     `json:"secretsProvider,omitempty"`
 	CloudProvider          string                     `json:"cloudProvider,omitempty"`
 	K8sResourcesIdentifier string                     `json:"k8sResourcesIdentifier,omitempty"`
 	DeploymentYamlManifest DeploymentYamlManifestType `json:"deploymentYamlManifest"`
