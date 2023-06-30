@@ -1,7 +1,6 @@
 package tasks
 
 import (
-	"encoding/json"
 	"fmt"
 
 	"github.com/Humalect/humalect-core/agent/constants"
@@ -56,59 +55,31 @@ func Deploy(config *constants.ParamsConfig) error {
 	}
 	fmt.Println("Kaniko Job Completed")
 	config.WebhookData = utils.UpdateStatusData(config.WebhookData, constants.KanikoJobExecuted, true)
-
 	services.SendWebhook(config.WebhookEndpoint, config.WebhookData, true, constants.KanikoJobExecuted)
-	var deploymentYamlManifest constants.DeploymentYamlManifestType
-	err = json.Unmarshal([]byte(config.DeploymentYamlManifest), &deploymentYamlManifest)
+
+	awsSecretCredentials, err := services.GetAwsSecretCredentials(config)
+	if err != nil {
+		return err
+	}
+
+	azureVaultCredentials, err := services.GetAzureVaultCredentials(config)
+	if err != nil {
+		return err
+	}
+
+	deploymentYamlManifest, err := services.GetDeploymentYamlManifest(config)
+	if err != nil {
+		return err
+	}
 	deploymentYamlManifest.Spec.Template.Spec.ImagePullSecrets = []corev1.LocalObjectReference{{Name: kanikoJobResources.CloudProviderSecretName}}
 
+	serviceYamlManifest, err := services.GetServiceYamlManifest(config)
 	if err != nil {
-		fmt.Println(err)
-		config.WebhookData = utils.UpdateStatusData(config.WebhookData, constants.CreatedApplicationCrd, false)
-		services.SendWebhook(config.WebhookEndpoint, config.WebhookData, false, constants.CreatedApplicationCrd)
-		return err
-	}
-	fmt.Println("Deployment Manifest Unmarshalled")
-
-	var serviceYamlManifest constants.ServiceYamlManifestType
-	err = json.Unmarshal([]byte(config.ServiceYamlManifest), &serviceYamlManifest)
-
-	if err != nil {
-		fmt.Println(err)
-		config.WebhookData = utils.UpdateStatusData(config.WebhookData, constants.CreatedApplicationCrd, false)
-		services.SendWebhook(config.WebhookEndpoint, config.WebhookData, false, constants.CreatedApplicationCrd)
-		return err
-	}
-	fmt.Println("Service Manifest Unmarshalled")
-
-	var ingressYamlManifest constants.IngressYamlManifestType
-	err = json.Unmarshal([]byte(config.IngressYamlManifest), &ingressYamlManifest)
-
-	if err != nil {
-		fmt.Println(err)
-		config.WebhookData = utils.UpdateStatusData(config.WebhookData, constants.CreatedApplicationCrd, false)
-		services.SendWebhook(config.WebhookEndpoint, config.WebhookData, false, constants.CreatedApplicationCrd)
-		return err
-	}
-	fmt.Println("Ingress Manifest Unmarshalled")
-
-	var awsSecretCredentials constants.AwsSecretCredentials
-	err = json.Unmarshal([]byte(config.AwsSecretCredentials), &awsSecretCredentials)
-
-	if err != nil {
-		fmt.Println(err)
-		config.WebhookData = utils.UpdateStatusData(config.WebhookData, constants.CreatedApplicationCrd, false)
-		services.SendWebhook(config.WebhookEndpoint, config.WebhookData, false, constants.CreatedApplicationCrd)
 		return err
 	}
 
-	var azureVaultCredentials constants.AzureVaultCredentials
-	err = json.Unmarshal([]byte(config.AzureVaultCredentials), &azureVaultCredentials)
-
+	ingressYamlManifest, err := services.GetIngressYamlManifest(config)
 	if err != nil {
-		fmt.Println(err)
-		config.WebhookData = utils.UpdateStatusData(config.WebhookData, constants.CreatedApplicationCrd, false)
-		services.SendWebhook(config.WebhookEndpoint, config.WebhookData, false, constants.CreatedApplicationCrd)
 		return err
 	}
 
