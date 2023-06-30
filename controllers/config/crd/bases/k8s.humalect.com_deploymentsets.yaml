@@ -65,6 +65,8 @@ spec:
                       type: string
                     regitryUrl:
                       type: string
+                    region:
+                      type: string
                   type: object
                 dockerHubCredentials:
                   properties:
