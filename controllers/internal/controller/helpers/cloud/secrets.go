@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"time"
 
+	k8sv1 "github.com/Humalect/humalect-core/api/v1"
 	constants "github.com/Humalect/humalect-core/internal/controller/constants"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -17,42 +18,27 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
 )
 
-func GetCloudSecretMap(secretsProvider string, awsAccessKey string, awsSecretKey string,
-	awsRegion string, azureVaultToken string, secretName string, region string, vaultName string,
-	cloudId string) (map[string]string, error) {
+func GetCloudSecretMap(application *k8sv1.Application) (map[string]string, error) {
 	var secretsMap map[string]string
 	var secretString string
 	var err error
-	if cloudId == constants.CloudIdAWS {
-		config, err := config.LoadDefaultConfig(context.TODO(), config.WithRegion(region))
+	if application.Spec.SecretsProvider == constants.CloudIdAWS {
+		config, err := config.LoadDefaultConfig(context.TODO(), config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(application.Spec.AwsSecretCredentials.AccessKey, application.Spec.AwsSecretCredentials.SecretKey, "")))
 		if err != nil {
 			log.Fatal(err)
 			return map[string]string{}, err
 		}
 
-		secretString, err = getAwsSecretString(config, secretName, region)
+		secretString, err = getAwsSecretString(config, application.Spec.SecretManagerName, application.Spec.AwsSecretCredentials.Region)
+
+	} else if application.Spec.SecretsProvider == constants.CloudIdAzure {
+		secretString, err = getAzureSecretString(application.Spec.AzureVaultCredentials.Token, application.Spec.AzureVaultCredentials.Name, application.Spec.SecretManagerName)
 		if err != nil {
 			log.Fatal(err.Error())
 			return map[string]string{}, err
 		}
-	} else if cloudId == constants.CloudIdAzure || secretsProvider == constants.CloudIdAzure {
-		secretString, err = getAzureSecretString(azureVaultToken, vaultName, secretName)
-		if err != nil {
-			log.Fatal(err.Error())
-			return map[string]string{}, err
-		}
-	} else if cloudId == constants.CloudIdCivo && secretsProvider == constants.CloudIdAWS {
-		// Load custom configuration
-		config, err := config.LoadDefaultConfig(context.TODO(), config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(awsAccessKey, awsSecretKey, "")))
-		if err != nil {
-			log.Fatal(err)
-			return map[string]string{}, err
-		}
-
-		secretString, err = getAwsSecretString(config, secretName, awsRegion)
-
 	} else {
-		return map[string]string{}, errors.New("Invalid Cloud Id for secrets")
+		return map[string]string{}, errors.New("Invalid Secrets Provider for secrets")
 	}
 	err = json.Unmarshal([]byte(secretString), &secretsMap)
 	if err != nil {
