@@ -80,6 +80,7 @@ func CreateKanikoJob(params constants.ParamsConfig) (CreateJobConfig, error) {
 }
 
 func createCloudProviderCredSecrets(clientset *kubernetes.Clientset, params constants.ParamsConfig) (string, error) {
+	var secretData string
 	if params.ArtifactsRegistryProvider == constants.RegistryIdAWS {
 		var ecrCredentials constants.EcrCredentials
 		err := json.Unmarshal([]byte(params.EcrCredentials), &ecrCredentials)
@@ -96,89 +97,33 @@ func createCloudProviderCredSecrets(clientset *kubernetes.Clientset, params cons
 			return "", err
 		}
 
-		dockerRegistrySecret := &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: fmt.Sprintf("%s-ksec-ecr-%s-%s",
-					params.ManagedBy[:int(math.Min(float64(len(params.ManagedBy)), float64(10)))],
-					params.CommitId[:int(math.Min(float64(len(params.CommitId)), float64(5)))],
-					params.DeploymentId[:int(math.Min(float64(len(params.DeploymentId)), float64(7)))]),
-				Namespace: "humalect",
-				Labels: map[string]string{
-					"app": fmt.Sprintf("%s-build-push-dockerecrimage-%s-%s",
-						params.ManagedBy[:int(math.Min(float64(len(params.ManagedBy)), float64(10)))],
-						params.CommitId[:int(math.Min(float64(len(params.CommitId)), float64(5)))],
-						params.DeploymentId[:int(math.Min(float64(len(params.DeploymentId)), float64(7)))]),
-					"DeploymentId": params.DeploymentId,
-					"ManagedBy":    params.ManagedBy,
-					"CommitId":     params.CommitId,
-				},
-			},
-			Type: corev1.SecretTypeDockerConfigJson,
-			StringData: map[string]string{
-				".dockerconfigjson": fmt.Sprintf(`{  
-					"auths": {  
-						"%s": {  
-							"username":"AWS",
-							"password": "%s"  
-						}  
-					}  
-				}`, ecrCredentials.RegistryUrl, ecrToken),
-			},
-		}
+		secretData = fmt.Sprintf(`{  
+			"auths": {  
+				"%s": {  
+					"username":"AWS",
+					"password": "%s"  
+				}  
+			}  
+		}`, ecrCredentials.RegistryUrl, ecrToken)
 
-		createdSecret, err := clientset.CoreV1().Secrets("humalect").Create(context.Background(), dockerRegistrySecret, metav1.CreateOptions{})
-		if err != nil {
-			log.Fatalf("Error creating docker registry secret secret: %v", err)
-		}
-		log.Printf("Docker Registry Secret %s created in Namespace %s\n", createdSecret.Name, createdSecret.Namespace)
-		return createdSecret.Name, nil
+		return createKanikoSecret(secretData, params.ArtifactsRegistryProvider, params, clientset)
 
 	} else if params.ArtifactsRegistryProvider == constants.RegistryIdDockerhub {
 
-		secretData, err := getDockerHubSecretKey(params)
+		secretKey, err := getDockerHubSecretKey(params)
 
 		if err != nil {
 			log.Fatalf("Error getting dockerhub secret: %v", err)
 			return "", err
 		}
 
-		dockerRegistrySecret := &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: fmt.Sprintf("%s-ksec-dh-%s-%s",
-					params.ManagedBy[:int(math.Min(float64(len(params.ManagedBy)), float64(10)))],
-					params.CommitId[:int(math.Min(float64(len(params.CommitId)), float64(5)))],
-					params.DeploymentId[:int(math.Min(float64(len(params.DeploymentId)), float64(7)))]),
-				Namespace: "humalect",
-				Labels: map[string]string{
-					"app": fmt.Sprintf("%s-build-push-dockerHubimage-%s-%s",
-						params.ManagedBy[:int(math.Min(float64(len(params.ManagedBy)), float64(10)))],
-						params.CommitId[:int(math.Min(float64(len(params.CommitId)), float64(5)))],
-						params.DeploymentId[:int(math.Min(float64(len(params.DeploymentId)), float64(7)))]),
-					"DeploymentId": params.DeploymentId,
-					"ManagedBy":    params.ManagedBy,
-					"CommitId":     params.CommitId,
-				},
-			},
-			Type: corev1.SecretTypeDockerConfigJson,
-			StringData: map[string]string{
-				".dockerconfigjson": strings.Join(strings.Fields(fmt.Sprintf(`{  
-					"auths": {  
-						"https://index.docker.io/v1/": {  
-							"auth": "%s"  
-						}  
-					}  
-				}`, secretData)), ""),
-			},
-		}
-
-		createdSecret, err := clientset.CoreV1().Secrets("humalect").Create(context.Background(), dockerRegistrySecret, metav1.CreateOptions{})
-		if err != nil {
-			log.Fatalf("Error creating docker registry secret secret: %v", err)
-		}
-
-		log.Printf("Docker Registry Secret %s created in Namespace %s\n", createdSecret.Name, createdSecret.Namespace)
-
-		return createdSecret.Name, nil
+		secretData = strings.Join(strings.Fields(fmt.Sprintf(`{  
+			"auths": {  
+				"https://index.docker.io/v1/": {  
+					"auth": "%s"  
+				}  
+			}  
+		}`, secretKey)), "")
 
 	} else if params.ArtifactsRegistryProvider == constants.RegistryIdAzure {
 
@@ -197,45 +142,20 @@ func createCloudProviderCredSecrets(clientset *kubernetes.Clientset, params cons
 			return "", err
 		}
 
-		// azureCreds, err := getOrgAzureCredsForAcr(params.AzureManagementScopeToken, params.AzureAcrRegistryName, params.AzureSubscriptionId, params.AzureResourceGroupName)
-		dockerRegistrySecret := &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: fmt.Sprintf("%s-ksec-acr-%s-%s",
-					params.ManagedBy[:int(math.Min(float64(len(params.ManagedBy)), float64(10)))],
-					params.CommitId[:int(math.Min(float64(len(params.CommitId)), float64(5)))],
-					params.DeploymentId[:int(math.Min(float64(len(params.DeploymentId)), float64(7)))]),
-				Namespace: "humalect",
-				Labels: map[string]string{
-					"app": fmt.Sprintf("%s-build-push-dockerimage-%s-%s",
-						params.ManagedBy[:int(math.Min(float64(len(params.ManagedBy)), float64(10)))],
-						params.CommitId[:int(math.Min(float64(len(params.CommitId)), float64(5)))],
-						params.DeploymentId[:int(math.Min(float64(len(params.DeploymentId)), float64(7)))]),
-					"DeploymentId": params.DeploymentId,
-					"ManagedBy":    params.ManagedBy,
-					"CommitId":     params.CommitId,
-				},
-			},
-			Type: corev1.SecretTypeDockerConfigJson,
-			StringData: map[string]string{
-				".dockerconfigjson": fmt.Sprintf(`{  
-					"auths": {  
-						"%s.azurecr.io": {  
-							"username": "%s",  
-							"password": "%s"  
-						}  
-					}  
-				}`, acrCredentials.RegistryName, azureCreds.Username, azureCreds.Password),
-			},
-		}
-		createdSecret, err := clientset.CoreV1().Secrets("humalect").Create(context.Background(), dockerRegistrySecret, metav1.CreateOptions{})
-		if err != nil {
-			log.Fatalf("Error creating docker registry secret secret: %v", err)
-		}
-
-		log.Printf("Docker Registry Secret %s created in Namespace %s\n", createdSecret.Name, createdSecret.Namespace)
-		return createdSecret.Name, nil
+		secretData = fmt.Sprintf(`{  
+			"auths": {  
+				"%s.azurecr.io": {  
+					"username": "%s",  
+					"password": "%s"  
+				}  
+			}  
+		}`, acrCredentials.RegistryName, azureCreds.Username, azureCreds.Password)
+	} else {
+		fmt.Println("Invalid Artifacts Registry Provider received.")
+		return "", errors.New("Invalid Artifacts Registry Provider received.")
 	}
-	return "", nil
+
+	return createKanikoSecret(secretData, params.ArtifactsRegistryProvider, params, clientset)
 }
 
 func getOrgAzureCredsForAcr(AzureManagementScopeToken string, AzureAcrRegistryName string, AzureSubscriptionId string, AzureResourceGroupName string) (AzureCreds, error) {
@@ -694,4 +614,37 @@ func getDockerHubSecretKey(params constants.ParamsConfig) (string, error) {
 	} else {
 		return "", errors.New("No credentials provided")
 	}
+}
+
+func createKanikoSecret(secretData string, artifactsRegistryName string, params constants.ParamsConfig, clientset *kubernetes.Clientset) (string, error) {
+	dockerRegistrySecret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: fmt.Sprintf("%s-ksec-%s-%s-%s",
+				artifactsRegistryName,
+				params.ManagedBy[:int(math.Min(float64(len(params.ManagedBy)), float64(10)))],
+				params.CommitId[:int(math.Min(float64(len(params.CommitId)), float64(5)))],
+				params.DeploymentId[:int(math.Min(float64(len(params.DeploymentId)), float64(7)))]),
+			Namespace: params.Namespace,
+			Labels: map[string]string{
+				"app": fmt.Sprintf("%s-build-push-dockerecrimage-%s-%s",
+					params.ManagedBy[:int(math.Min(float64(len(params.ManagedBy)), float64(10)))],
+					params.CommitId[:int(math.Min(float64(len(params.CommitId)), float64(5)))],
+					params.DeploymentId[:int(math.Min(float64(len(params.DeploymentId)), float64(7)))]),
+				"DeploymentId": params.DeploymentId,
+				"ManagedBy":    params.ManagedBy,
+				"CommitId":     params.CommitId,
+			},
+		},
+		Type: corev1.SecretTypeDockerConfigJson,
+		StringData: map[string]string{
+			".dockerconfigjson": secretData,
+		},
+	}
+
+	createdSecret, err := clientset.CoreV1().Secrets("humalect").Create(context.Background(), dockerRegistrySecret, metav1.CreateOptions{})
+	if err != nil {
+		log.Fatalf("Error creating %s registry secret secret: %v", artifactsRegistryName, err)
+	}
+	log.Printf("%s Registry Secret %s created in Namespace %s\n", artifactsRegistryName, createdSecret.Name, createdSecret.Namespace)
+	return createdSecret.Name, nil
 }
