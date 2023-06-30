@@ -6,7 +6,6 @@ import (
 	"github.com/Humalect/humalect-core/agent/constants"
 	"github.com/Humalect/humalect-core/agent/services"
 	"github.com/Humalect/humalect-core/agent/utils"
-	corev1 "k8s.io/api/core/v1"
 )
 
 func Deploy(config *constants.ParamsConfig) error {
@@ -57,36 +56,33 @@ func Deploy(config *constants.ParamsConfig) error {
 	config.WebhookData = utils.UpdateStatusData(config.WebhookData, constants.KanikoJobExecuted, true)
 	services.SendWebhook(config.WebhookEndpoint, config.WebhookData, true, constants.KanikoJobExecuted)
 
-	awsSecretCredentials, err := services.GetAwsSecretCredentials(config)
-	if err != nil {
-		return err
-	}
+	// awsSecretCredentials, err := services.GetAwsSecretCredentials(config)
+	// if err != nil {
+	// 	return err
+	// }
 
-	azureVaultCredentials, err := services.GetAzureVaultCredentials(config)
-	if err != nil {
-		return err
-	}
+	// azureVaultCredentials, err := services.GetAzureVaultCredentials(config)
+	// if err != nil {
+	// 	return err
+	// }
 
-	deploymentYamlManifest, err := services.GetDeploymentYamlManifest(config)
-	if err != nil {
-		return err
-	}
-	deploymentYamlManifest.Spec.Template.Spec.ImagePullSecrets = []corev1.LocalObjectReference{{Name: kanikoJobResources.CloudProviderSecretName}}
+	// deploymentYamlManifest, err := services.GetDeploymentYamlManifest(config)
+	// if err != nil {
+	// 	return err
+	// }
+	// deploymentYamlManifest.Spec.Template.Spec.ImagePullSecrets = []corev1.LocalObjectReference{{Name: kanikoJobResources.CloudProviderSecretName}}
 
-	serviceYamlManifest, err := services.GetServiceYamlManifest(config)
-	if err != nil {
-		return err
-	}
+	// serviceYamlManifest, err := services.GetServiceYamlManifest(config)
+	// if err != nil {
+	// 	return err
+	// }
 
-	ingressYamlManifest, err := services.GetIngressYamlManifest(config)
-	if err != nil {
-		return err
-	}
+	// ingressYamlManifest, err := services.GetIngressYamlManifest(config)
+	// if err != nil {
+	// 	return err
+	// }
 
-	_, err = services.CreateK8sApplication(config.SecretsProvider, awsSecretCredentials, azureVaultCredentials, config.K8sAppName, config.ManagedBy, config.CloudRegion, config.CloudProvider,
-		config.K8sResourcesIdentifier, deploymentYamlManifest, serviceYamlManifest, ingressYamlManifest, config.SecretManagerName,
-		config.AzureVaultToken, config.AzureVaultName, config.Namespace, config.WebhookEndpoint,
-		utils.UpdateStatusData(config.WebhookData, constants.CreatedApplicationCrd, true), config.DeploymentId)
+	_, err = services.CreateK8sApplication(config, kanikoJobResources, utils.UpdateStatusData(config.WebhookData, constants.CreatedApplicationCrd, true))
 	if err != nil {
 		fmt.Println(err)
 		config.WebhookData = utils.UpdateStatusData(config.WebhookData, constants.CreatedApplicationCrd, false)
