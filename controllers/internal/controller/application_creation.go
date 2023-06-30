@@ -36,11 +36,10 @@ func (r *ApplicationReconciler) handleCreation(ctx context.Context, application 
 	// Check your specific condition
 	// TODO send deployment id here so that secret can be created with every deployment
 	if application.Spec.SecretManagerName != "" {
-		regexPattern := "[^a-z0-9-.]+"  
-  
-		regex, err := regexp.Compile(regexPattern) 
+		regexPattern := "[^a-z0-9-.]+"
+		regex, err := regexp.Compile(regexPattern)
 		secretMetadataObject := metav1.ObjectMeta{
-			Name: regex.ReplaceAllString(strings.ToLower(application.Spec.SecretManagerName), "-")  ,
+			Name: strings.Trim(regex.ReplaceAllString(strings.ToLower(application.Spec.SecretManagerName), "-"), "-."),
 			Labels: map[string]string{
 				"managedBy":  application.Spec.ManagedBy,
 				"identifier": application.Spec.K8sResourcesIdentifier,
