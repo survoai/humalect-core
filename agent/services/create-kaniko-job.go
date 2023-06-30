@@ -82,21 +82,16 @@ func CreateKanikoJob(params constants.ParamsConfig) (CreateJobConfig, error) {
 func createCloudProviderCredSecrets(clientset *kubernetes.Clientset, params constants.ParamsConfig) (string, error) {
 	var secretData string
 	if params.ArtifactsRegistryProvider == constants.RegistryIdAWS {
-		var ecrCredentials constants.EcrCredentials
-		err := json.Unmarshal([]byte(params.EcrCredentials), &ecrCredentials)
-
+		ecrCredentials, err := GetEcrCredentials(&params)
 		if err != nil {
 			log.Fatalf("Failed to parse ECR credentials got error : %v", err)
 			return "", err
 		}
-
 		ecrToken, err := getEcrLoginToken(ecrCredentials.AccessKey, ecrCredentials.SecretKey, ecrCredentials.Region)
-
 		if err != nil {
 			log.Fatalf("Error getting ECR token: %v", err)
 			return "", err
 		}
-
 		secretData = fmt.Sprintf(`{  
 			"auths": {  
 				"%s": {  
@@ -105,18 +100,13 @@ func createCloudProviderCredSecrets(clientset *kubernetes.Clientset, params cons
 				}  
 			}  
 		}`, ecrCredentials.RegistryUrl, ecrToken)
-
 		return createKanikoSecret(secretData, params.ArtifactsRegistryProvider, params, clientset)
-
 	} else if params.ArtifactsRegistryProvider == constants.RegistryIdDockerhub {
-
 		secretKey, err := getDockerHubSecretKey(params)
-
 		if err != nil {
 			log.Fatalf("Error getting dockerhub secret: %v", err)
 			return "", err
 		}
-
 		secretData = strings.Join(strings.Fields(fmt.Sprintf(`{  
 			"auths": {  
 				"https://index.docker.io/v1/": {  
@@ -124,7 +114,6 @@ func createCloudProviderCredSecrets(clientset *kubernetes.Clientset, params cons
 				}  
 			}  
 		}`, secretKey)), "")
-
 	} else if params.ArtifactsRegistryProvider == constants.RegistryIdAzure {
 
 		var acrCredentials constants.AcrCredentials
@@ -574,41 +563,29 @@ func getEcrLoginToken(accessKey string, secretKey string, region string) (string
 }
 
 func getDockerHubSecretKey(params constants.ParamsConfig) (string, error) {
-
-	var dockerHubCreds constants.DockerHubCredentials
-	err := json.Unmarshal([]byte(params.DockerHubCredentials), &dockerHubCreds)
-
+	dockerHubCreds, err := GetDockerHubCredentials(&params)
 	if err != nil {
 		log.Fatalf("Failed to parse DockerHub credentials got error : %v", err)
 		return "", err
 	}
-
 	if params.SecretsProvider == constants.CloudIdAWS {
-
-		var awsSecretCredentials constants.AwsSecretCredentials
-		err := json.Unmarshal([]byte(params.AwsSecretCredentials), &awsSecretCredentials)
-
+		awsSecretCredentials, err := GetAwsSecretCredentials(&params)
 		if err != nil {
 			log.Fatalf("Failed to parse Aws secrets credentials got error : %v", err)
 			return "", err
 		}
 		return getAwsSecretValue(dockerHubCreds.SecretName, awsSecretCredentials.AccessKey, awsSecretCredentials.SecretKey, awsSecretCredentials.Region)
 	} else if params.SecretsProvider == constants.CloudIdAzure {
-
-		var azureVaultCredentials constants.AzureVaultCredentials
-		err := json.Unmarshal([]byte(params.AzureVaultCredentials), &azureVaultCredentials)
-
+		azureVaultCredentials, err := GetAzureVaultCredentials(&params)
 		if err != nil {
 			log.Fatalf("Failed to parse Aws credentials got error : %v", err)
 			return "", err
 		}
 		secretData, err := getAzureSecretString(azureVaultCredentials.Token, azureVaultCredentials.Name, dockerHubCreds.SecretName)
-
 		if err != nil {
 			log.Fatalf("Error getting dockerhub secret: %v", err)
 			return "", err
 		}
-
 		return secretData, nil
 
 	} else {
