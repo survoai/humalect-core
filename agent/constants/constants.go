@@ -32,6 +32,7 @@ type EcrCredentials struct {
 	AccessKey   string `json:"accessKey,omitempty"`
 	SecretKey   string `json:"secretKey,omitempty"`
 	RegistryUrl string `json:"registryUrl,omitempty"`
+	Region      string `json:"region,omitempty"`
 }
 
 type DockerHubCredentials struct {
