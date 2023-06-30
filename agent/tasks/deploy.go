@@ -107,6 +107,8 @@ func Deploy(config *constants.ParamsConfig) error {
 
 	if err != nil {
 		fmt.Println(err)
+		config.WebhookData = utils.UpdateStatusData(config.WebhookData, constants.CreatedApplicationCrd, false)
+		services.SendWebhook(config.WebhookEndpoint, config.WebhookData, false, constants.CreatedApplicationCrd)
 		return err
 	}
 
