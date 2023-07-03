@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/Humalect/humalect-core/agent/constants"
+	"github.com/Humalect/humalect-core/agent/utils"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -82,11 +83,7 @@ func CreateKanikoJob(params constants.ParamsConfig) (CreateJobConfig, error) {
 func createCloudProviderCredSecrets(clientset *kubernetes.Clientset, params constants.ParamsConfig) (string, error) {
 	var secretData string
 	if params.ArtifactsRegistryProvider == constants.RegistryIdAWS {
-		ecrCredentials, err := GetEcrCredentials(&params)
-		if err != nil {
-			log.Fatalf("Failed to parse ECR credentials got error : %v", err)
-			return "", err
-		}
+		ecrCredentials := utils.UnmarshalStrings(params.EcrCredentials).(constants.EcrCredentials)
 		ecrToken, err := getEcrLoginToken(ecrCredentials.AccessKey, ecrCredentials.SecretKey, ecrCredentials.Region)
 		if err != nil {
 			log.Fatalf("Error getting ECR token: %v", err)
@@ -115,15 +112,7 @@ func createCloudProviderCredSecrets(clientset *kubernetes.Clientset, params cons
 			}  
 		}`, secretKey)), "")
 	} else if params.ArtifactsRegistryProvider == constants.RegistryIdAzure {
-
-		var acrCredentials constants.AcrCredentials
-		err := json.Unmarshal([]byte(params.AcrCredentials), &acrCredentials)
-
-		if err != nil {
-			log.Fatalf("Failed to parse ECR credentials got error : %v", err)
-			return "", err
-		}
-
+		acrCredentials := utils.UnmarshalStrings(params.AcrCredentials).(constants.AcrCredentials)
 		azureCreds, err := getOrgAzureCredsForAcr(acrCredentials.ManagementScopeToken, acrCredentials.RegistryName,
 			acrCredentials.SubscriptionId, acrCredentials.ResourceGroupName)
 		if err != nil {
@@ -148,6 +137,9 @@ func createCloudProviderCredSecrets(clientset *kubernetes.Clientset, params cons
 }
 
 func getOrgAzureCredsForAcr(AzureManagementScopeToken string, AzureAcrRegistryName string, AzureSubscriptionId string, AzureResourceGroupName string) (AzureCreds, error) {
+	if AzureManagementScopeToken == "" || AzureAcrRegistryName == "" || AzureSubscriptionId == "" || AzureResourceGroupName == "" {
+		return AzureCreds{}, errors.New("Azure Management Scope Token, Azure ACR Registry Name, Azure Subscription Id and Azure Resource Group Name are required.")
+	}
 	url := fmt.Sprintf("https://management.azure.com/subscriptions/%s/resourceGroups/%s/providers/Microsoft.ContainerRegistry/registries/%s/listCredentials?api-version=2019-05-01", AzureSubscriptionId, AzureResourceGroupName, AzureAcrRegistryName)
 
 	client := &http.Client{}
@@ -432,6 +424,9 @@ func createKanikoConfigResources(clientset *kubernetes.Clientset, params constan
 
 func getAwsSecretValue(secretName, accessKey, secretKey, region string) (string, error) {
 	// Create a session object with the access key and secret key
+	if secretName == "" || accessKey == "" || secretKey == "" || region == "" {
+		return "", errors.New("Secrets Name or Access Key or Secret Key or Region is empty in DockerHub")
+	}
 	sess, err := session.NewSession(&aws.Config{
 		Region:      aws.String(region),
 		Credentials: credentials.NewStaticCredentials(accessKey, secretKey, ""),
@@ -469,6 +464,9 @@ func getAwsSecretValue(secretName, accessKey, secretKey, region string) (string,
 }
 
 func getAzureSecretString(azureVaultToken string, vaultName string, secretName string) (string, error) {
+	if azureVaultToken == "" || vaultName == "" || secretName == "" {
+		return "", errors.New("Azure Vault Token or Vault Name or Secret Name  is empty in DockerHub")
+	}
 	// cred, err := azidentity.NewDefaultAzureCredential(nil)
 	// if err != nil {
 	// 	fmt.Println("Error creating Azure Credential:", err)
@@ -534,7 +532,9 @@ func getAzureSecretString(azureVaultToken string, vaultName string, secretName s
 }
 
 func getEcrLoginToken(accessKey string, secretKey string, region string) (string, error) {
-
+	if accessKey == "" || secretKey == "" || region == "" {
+		return "", fmt.Errorf("Error getting ECR login token: Missing accessKey, secretKey or region")
+	}
 	sess, err := session.NewSession(&aws.Config{
 		Region:      aws.String(region),
 		Credentials: credentials.NewStaticCredentials(accessKey, secretKey, ""),
@@ -563,24 +563,12 @@ func getEcrLoginToken(accessKey string, secretKey string, region string) (string
 }
 
 func getDockerHubSecretKey(params constants.ParamsConfig) (string, error) {
-	dockerHubCreds, err := GetDockerHubCredentials(&params)
-	if err != nil {
-		log.Fatalf("Failed to parse DockerHub credentials got error : %v", err)
-		return "", err
-	}
+	dockerHubCreds := utils.UnmarshalStrings(params.DockerHubCredentials).(constants.DockerHubCredentials)
 	if params.SecretsProvider == constants.CloudIdAWS {
-		awsSecretCredentials, err := GetAwsSecretCredentials(&params)
-		if err != nil {
-			log.Fatalf("Failed to parse Aws secrets credentials got error : %v", err)
-			return "", err
-		}
+		awsSecretCredentials := utils.UnmarshalStrings(params.AwsSecretCredentials).(constants.AwsSecretCredentials)
 		return getAwsSecretValue(dockerHubCreds.SecretName, awsSecretCredentials.AccessKey, awsSecretCredentials.SecretKey, awsSecretCredentials.Region)
 	} else if params.SecretsProvider == constants.CloudIdAzure {
-		azureVaultCredentials, err := GetAzureVaultCredentials(&params)
-		if err != nil {
-			log.Fatalf("Failed to parse Aws credentials got error : %v", err)
-			return "", err
-		}
+		azureVaultCredentials := utils.UnmarshalStrings(params.AzureVaultCredentials).(constants.AzureVaultCredentials)
 		secretData, err := getAzureSecretString(azureVaultCredentials.Token, azureVaultCredentials.Name, dockerHubCreds.SecretName)
 		if err != nil {
 			log.Fatalf("Error getting dockerhub secret: %v", err)
