@@ -2,24 +2,17 @@ package services
 
 import (
 	"context"
-	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"math"
-	"net/http"
 	"strings"
-	"time"
 
 	"github.com/Humalect/humalect-core/agent/constants"
-	"github.com/Humalect/humalect-core/agent/utils"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/ecr"
-	"github.com/aws/aws-sdk-go/service/secretsmanager"
+	"github.com/Humalect/humalect-core/agent/services/aws"
+	"github.com/Humalect/humalect-core/agent/services/azure"
+	"github.com/Humalect/humalect-core/agent/services/dockerhub"
 
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -28,10 +21,6 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-type AzureCreds struct {
-	Username string `json:"username"`
-	Password string `json:"password"`
-}
 type CreateJobConfig struct {
 	CloudProviderSecretName string
 	DockerFileConfigName    string
@@ -80,106 +69,17 @@ func CreateKanikoJob(params constants.ParamsConfig) (CreateJobConfig, error) {
 	return createJobConfig, nil
 }
 
-func createCloudProviderCredSecrets(clientset *kubernetes.Clientset, params constants.ParamsConfig) (string, error) {
-	var secretData string
+func createArtifactsSecret(clientset *kubernetes.Clientset, params constants.ParamsConfig) (string, error) {
 	if params.ArtifactsRegistryProvider == constants.RegistryIdAWS {
-		ecrCredentials := utils.UnmarshalStrings(params.EcrCredentials).(constants.EcrCredentials)
-		ecrToken, err := getEcrLoginToken(ecrCredentials.AccessKey, ecrCredentials.SecretKey, ecrCredentials.Region)
-		if err != nil {
-			log.Fatalf("Error getting ECR token: %v", err)
-			return "", err
-		}
-		secretData = fmt.Sprintf(`{  
-			"auths": {  
-				"%s": {  
-					"username":"AWS",
-					"password": "%s"  
-				}  
-			}  
-		}`, ecrCredentials.RegistryUrl, ecrToken)
-		return createKanikoSecret(secretData, params.ArtifactsRegistryProvider, params, clientset)
+		return aws.CreateEcrSecret(params, clientset)
 	} else if params.ArtifactsRegistryProvider == constants.RegistryIdDockerhub {
-		secretKey, err := getDockerHubSecretKey(params)
-		if err != nil {
-			log.Fatalf("Error getting dockerhub secret: %v", err)
-			return "", err
-		}
-		secretData = strings.Join(strings.Fields(fmt.Sprintf(`{  
-			"auths": {  
-				"https://index.docker.io/v1/": {  
-					"auth": "%s"  
-				}  
-			}  
-		}`, secretKey)), "")
+		return dockerhub.CreateSecret(params, clientset)
 	} else if params.ArtifactsRegistryProvider == constants.RegistryIdAzure {
-		acrCredentials := utils.UnmarshalStrings(params.AcrCredentials).(constants.AcrCredentials)
-		azureCreds, err := getOrgAzureCredsForAcr(acrCredentials.ManagementScopeToken, acrCredentials.RegistryName,
-			acrCredentials.SubscriptionId, acrCredentials.ResourceGroupName)
-		if err != nil {
-			log.Fatalf("Error getting Azure ACR creds: %v", err)
-			return "", err
-		}
-
-		secretData = fmt.Sprintf(`{  
-			"auths": {  
-				"%s.azurecr.io": {  
-					"username": "%s",  
-					"password": "%s"  
-				}  
-			}  
-		}`, acrCredentials.RegistryName, azureCreds.Username, azureCreds.Password)
+		return azure.CreateAcrSecret(params, clientset)
 	} else {
 		fmt.Println("Invalid Artifacts Registry Provider received.")
 		return "", errors.New("Invalid Artifacts Registry Provider received.")
 	}
-
-	return createKanikoSecret(secretData, params.ArtifactsRegistryProvider, params, clientset)
-}
-
-func getOrgAzureCredsForAcr(AzureManagementScopeToken string, AzureAcrRegistryName string, AzureSubscriptionId string, AzureResourceGroupName string) (AzureCreds, error) {
-	if AzureManagementScopeToken == "" || AzureAcrRegistryName == "" || AzureSubscriptionId == "" || AzureResourceGroupName == "" {
-		return AzureCreds{}, errors.New("Azure Management Scope Token, Azure ACR Registry Name, Azure Subscription Id and Azure Resource Group Name are required.")
-	}
-	url := fmt.Sprintf("https://management.azure.com/subscriptions/%s/resourceGroups/%s/providers/Microsoft.ContainerRegistry/registries/%s/listCredentials?api-version=2019-05-01", AzureSubscriptionId, AzureResourceGroupName, AzureAcrRegistryName)
-
-	client := &http.Client{}
-	req, err := http.NewRequest("POST", url, strings.NewReader("{}"))
-	if err != nil {
-		return AzureCreds{}, err
-	}
-
-	req.Header.Set("Authorization", "Bearer "+AzureManagementScopeToken)
-	resp, err := client.Do(req)
-	if err != nil {
-		return AzureCreds{}, err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		fmt.Println("Status Code: ", resp.StatusCode)
-		fmt.Println("resp", resp)
-		return AzureCreds{}, errors.New("non-200 status code received when tried to get Creds for Azure ACR")
-	}
-
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return AzureCreds{}, err
-	}
-
-	var result map[string]interface{}
-	json.Unmarshal(body, &result)
-
-	username := result["username"].(string)
-	password := result["passwords"].([]interface{})[0].(map[string]interface{})["value"].(string)
-
-	if username == "" {
-		return AzureCreds{}, errors.New("unable to fetch credentials for ACR")
-	}
-
-	return AzureCreds{
-		Username: username,
-		Password: password,
-	}, nil
 }
 
 func getCodeSourceSpecificGitUrl(params constants.ParamsConfig) string {
@@ -408,7 +308,7 @@ func getKanikoJobObject(
 }
 
 func createKanikoConfigResources(clientset *kubernetes.Clientset, params constants.ParamsConfig) (CreateJobConfig, error) {
-	cloudProviderSecretName, err := createCloudProviderCredSecrets(clientset, params)
+	cloudProviderSecretName, err := createArtifactsSecret(clientset, params)
 	if err != nil {
 		log.Fatalf("Error Getting Secret Name: %v", err)
 		return CreateJobConfig{}, err
@@ -420,196 +320,4 @@ func createKanikoConfigResources(clientset *kubernetes.Clientset, params constan
 		return CreateJobConfig{}, err
 	}
 	return CreateJobConfig{CloudProviderSecretName: cloudProviderSecretName, DockerFileConfigName: dockerFileConfigName}, nil
-}
-
-func getAwsSecretValue(secretName, accessKey, secretKey, region string) (string, error) {
-	// Create a session object with the access key and secret key
-	if secretName == "" || accessKey == "" || secretKey == "" || region == "" {
-		return "", errors.New("Secrets Name or Access Key or Secret Key or Region is empty in DockerHub")
-	}
-	sess, err := session.NewSession(&aws.Config{
-		Region:      aws.String(region),
-		Credentials: credentials.NewStaticCredentials(accessKey, secretKey, ""),
-	})
-	if err != nil {
-		fmt.Println("Error creating session:", err)
-		return "", err
-	}
-
-	// Create a Secrets Manager client
-	svc := secretsmanager.New(sess)
-
-	// Call the GetSecretValue API
-	input := &secretsmanager.GetSecretValueInput{
-		SecretId: aws.String(secretName),
-	}
-	result, err := svc.GetSecretValue(input)
-	if err != nil {
-		fmt.Println("Error getting secret value:", err)
-		return "", err
-	}
-
-	// Extract the secret value and return it
-	secretValue := *result.SecretString
-
-	var secretData map[string]string
-	err = json.Unmarshal([]byte(secretValue), &secretData)
-	if err != nil {
-		fmt.Println("Error unmarshalling JSON:", err)
-		return "", err
-	}
-
-	// Return the "dockerhub" key's value
-	return secretData[constants.RegistryIdDockerhub], nil
-}
-
-func getAzureSecretString(azureVaultToken string, vaultName string, secretName string) (string, error) {
-	if azureVaultToken == "" || vaultName == "" || secretName == "" {
-		return "", errors.New("Azure Vault Token or Vault Name or Secret Name  is empty in DockerHub")
-	}
-	// cred, err := azidentity.NewDefaultAzureCredential(nil)
-	// if err != nil {
-	// 	fmt.Println("Error creating Azure Credential:", err)
-	// 	return "", err
-	// }
-	// fmt.Println("Here goes credentials")
-	// fmt.Println(cred)
-
-	// client, err := azsecrets.NewClient(vaultURL, cred, nil)
-	// if err != nil {
-	// 	fmt.Println("Error creating Azure Secret Client:", err)
-	// 	return "", err
-	// }
-
-	// resp, err := client.GetSecret(context.Background(), secretName, "", nil)
-	// if err != nil {
-	// 	fmt.Println("Error retrieving secret value:", err)
-	// 	return "", err
-	// }
-
-	// var secretValue string = *resp.Value
-	// fmt.Println("Secret value goes here", secretValue)
-	client := &http.Client{
-		Timeout: 30 * time.Second,
-	}
-
-	url := fmt.Sprintf("https://%s.vault.azure.net/secrets/%s?api-version=7.3", vaultName, secretName)
-
-	req, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		return "", fmt.Errorf("error creating request: %v", err)
-	}
-
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", azureVaultToken))
-
-	resp, err := client.Do(req)
-	if err != nil {
-		return "", fmt.Errorf("error making request: %v", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("error response status code: %d", resp.StatusCode)
-	}
-
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return "", fmt.Errorf("error reading response body: %v", err)
-	}
-
-	var responseJSON map[string]interface{}
-	err = json.Unmarshal(body, &responseJSON)
-	if err != nil {
-		return "", fmt.Errorf("error unmarshalling response JSON: %v", err)
-	}
-
-	secretValue, ok := responseJSON["value"].(string)
-	if !ok {
-		return "", fmt.Errorf("value not found in response JSON")
-	}
-
-	return secretValue, nil
-}
-
-func getEcrLoginToken(accessKey string, secretKey string, region string) (string, error) {
-	if accessKey == "" || secretKey == "" || region == "" {
-		return "", fmt.Errorf("Error getting ECR login token: Missing accessKey, secretKey or region")
-	}
-	sess, err := session.NewSession(&aws.Config{
-		Region:      aws.String(region),
-		Credentials: credentials.NewStaticCredentials(accessKey, secretKey, ""),
-	})
-	if err != nil {
-		fmt.Println("Error creating session:", err)
-		return "", err
-	}
-
-	ecrClient := ecr.New(sess)
-
-	result, err := ecrClient.GetAuthorizationToken(&ecr.GetAuthorizationTokenInput{})
-	if err != nil {
-		fmt.Println("Error getting ECR authorization token:", err)
-		return "", err
-	}
-
-	decodedToken, err := base64.StdEncoding.DecodeString(*result.AuthorizationData[0].AuthorizationToken)
-	if err != nil {
-		fmt.Println("Error decoding ECR authorization token:", err)
-		return "", err
-	}
-
-	password := strings.Split(string(decodedToken), ":")[1]
-	return password, nil
-}
-
-func getDockerHubSecretKey(params constants.ParamsConfig) (string, error) {
-	dockerHubCreds := utils.UnmarshalStrings(params.DockerHubCredentials).(constants.DockerHubCredentials)
-	if params.SecretsProvider == constants.CloudIdAWS {
-		awsSecretCredentials := utils.UnmarshalStrings(params.AwsSecretCredentials).(constants.AwsSecretCredentials)
-		return getAwsSecretValue(dockerHubCreds.SecretName, awsSecretCredentials.AccessKey, awsSecretCredentials.SecretKey, awsSecretCredentials.Region)
-	} else if params.SecretsProvider == constants.CloudIdAzure {
-		azureVaultCredentials := utils.UnmarshalStrings(params.AzureVaultCredentials).(constants.AzureVaultCredentials)
-		secretData, err := getAzureSecretString(azureVaultCredentials.Token, azureVaultCredentials.Name, dockerHubCreds.SecretName)
-		if err != nil {
-			log.Fatalf("Error getting dockerhub secret: %v", err)
-			return "", err
-		}
-		return secretData, nil
-
-	} else {
-		return "", errors.New("No credentials provided")
-	}
-}
-
-func createKanikoSecret(secretData string, artifactsRegistryName string, params constants.ParamsConfig, clientset *kubernetes.Clientset) (string, error) {
-	dockerRegistrySecret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: fmt.Sprintf("%s-ksec-%s-%s-%s",
-				artifactsRegistryName,
-				params.ManagedBy[:int(math.Min(float64(len(params.ManagedBy)), float64(10)))],
-				params.CommitId[:int(math.Min(float64(len(params.CommitId)), float64(5)))],
-				params.DeploymentId[:int(math.Min(float64(len(params.DeploymentId)), float64(7)))]),
-			Namespace: params.Namespace,
-			Labels: map[string]string{
-				"app": fmt.Sprintf("%s-build-push-dockerecrimage-%s-%s",
-					params.ManagedBy[:int(math.Min(float64(len(params.ManagedBy)), float64(10)))],
-					params.CommitId[:int(math.Min(float64(len(params.CommitId)), float64(5)))],
-					params.DeploymentId[:int(math.Min(float64(len(params.DeploymentId)), float64(7)))]),
-				"DeploymentId": params.DeploymentId,
-				"ManagedBy":    params.ManagedBy,
-				"CommitId":     params.CommitId,
-			},
-		},
-		Type: corev1.SecretTypeDockerConfigJson,
-		StringData: map[string]string{
-			".dockerconfigjson": secretData,
-		},
-	}
-
-	createdSecret, err := clientset.CoreV1().Secrets("humalect").Create(context.Background(), dockerRegistrySecret, metav1.CreateOptions{})
-	if err != nil {
-		log.Fatalf("Error creating %s registry secret secret: %v", artifactsRegistryName, err)
-	}
-	log.Printf("%s Registry Secret %s created in Namespace %s\n", artifactsRegistryName, createdSecret.Name, createdSecret.Namespace)
-	return createdSecret.Name, nil
 }
