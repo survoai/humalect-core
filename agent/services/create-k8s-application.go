@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/Humalect/humalect-core/agent/constants"
+	"github.com/Humalect/humalect-core/agent/utils"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -15,39 +16,14 @@ import (
 	"k8s.io/client-go/dynamic"
 )
 
-func CreateK8sApplication(paramsConfig *constants.ParamsConfig, kanikoJobResources CreateJobConfig, webhookData string) (string, error) {
-	// var kubeconfig *string
-	// if home := os.Getenv("HOME"); home != "" {
-	// 	kubeconfig = flag.String("kubeconfig", filepath.Join(home, ".kube", "config"), "(optional) absolute path to the kubeconfig file")
-	// } else {
-	// 	kubeconfig = flag.String("kubeconfig", "", "absolute path to the kubeconfig file")
-	// }
+func CreateK8sApplication(params *constants.ParamsConfig, kanikoJobResources CreateJobConfig, webhookData string) (string, error) {
+	awsSecretCredentials := utils.UnmarshalStrings(params.AwsSecretCredentials).(constants.AwsSecretCredentials)
+	azureVaultCredentials := utils.UnmarshalStrings(params.AzureVaultCredentials).(constants.AzureVaultCredentials)
+	deploymentYamlManifest := utils.UnmarshalStrings(params.DeploymentYamlManifest).(constants.DeploymentYamlManifestType)
+	serviceYamlManifest := utils.UnmarshalStrings(params.ServiceYamlManifest).(constants.ServiceYamlManifestType)
+	ingressYamlManifest := utils.UnmarshalStrings(params.IngressYamlManifest).(constants.IngressYamlManifestType)
 
-	awsSecretCredentials, err := GetAwsSecretCredentials(paramsConfig)
-	if err != nil {
-		return "", err
-	}
-
-	azureVaultCredentials, err := GetAzureVaultCredentials(paramsConfig)
-	if err != nil {
-		return "", err
-	}
-
-	deploymentYamlManifest, err := GetDeploymentYamlManifest(paramsConfig)
-	if err != nil {
-		return "", err
-	}
 	deploymentYamlManifest.Spec.Template.Spec.ImagePullSecrets = []corev1.LocalObjectReference{{Name: kanikoJobResources.CloudProviderSecretName}}
-
-	serviceYamlManifest, err := GetServiceYamlManifest(paramsConfig)
-	if err != nil {
-		return "", err
-	}
-
-	ingressYamlManifest, err := GetIngressYamlManifest(paramsConfig)
-	if err != nil {
-		return "", err
-	}
 
 	flag.Parse()
 	config := GetK8sConfig()
@@ -70,34 +46,34 @@ func CreateK8sApplication(paramsConfig *constants.ParamsConfig, kanikoJobResourc
 			"kind":       "Application",
 			"metadata": map[string]interface{}{
 				"labels": map[string]interface{}{
-					"app.kubernetes.io/name":       paramsConfig.K8sAppName,
-					"app.kubernetes.io/instance":   paramsConfig.K8sAppName,
+					"app.kubernetes.io/name":       params.K8sAppName,
+					"app.kubernetes.io/instance":   params.K8sAppName,
 					"app.kubernetes.io/part-of":    "humalect-core",
-					"app.kubernetes.io/managed-by": paramsConfig.ManagedBy,
+					"app.kubernetes.io/managed-by": params.ManagedBy,
 					"app.kubernetes.io/created-by": "humalect-core",
-					"deploymentId":                 paramsConfig.DeploymentId,
+					"deploymentId":                 params.DeploymentId,
 				},
-				"name": paramsConfig.K8sAppName,
+				"name": params.K8sAppName,
 				"finalizers": []interface{}{
 					"finalizers.humalect.com/application",
 				},
 			},
 			"spec": map[string]interface{}{
-				"secretsProvider":        paramsConfig.SecretsProvider,
+				"secretsProvider":        params.SecretsProvider,
 				"awsSecretCredentials":   awsSecretCredentials,
 				"azureVaultCredentials":  azureVaultCredentials,
-				"cloudRegion":            paramsConfig.CloudRegion,
-				"cloudProvider":          paramsConfig.CloudProvider,
-				"k8sResourcesIdentifier": paramsConfig.K8sResourcesIdentifier,
+				"cloudRegion":            params.CloudRegion,
+				"cloudProvider":          params.CloudProvider,
+				"k8sResourcesIdentifier": params.K8sResourcesIdentifier,
 				"deploymentYamlManifest": deploymentYamlManifest,
 				"serviceYamlManifest":    serviceYamlManifest,
 				"ingressYamlManifest":    ingressYamlManifest,
-				"secretManagerName":      paramsConfig.SecretManagerName,
-				"managedBy":              paramsConfig.ManagedBy,
-				"azureVaultToken":        paramsConfig.AzureVaultToken,
-				"azureVaultName":         paramsConfig.AzureVaultName,
-				"namespace":              paramsConfig.Namespace,
-				"webhookEndpoint":        paramsConfig.WebhookEndpoint,
+				"secretManagerName":      params.SecretManagerName,
+				"managedBy":              params.ManagedBy,
+				"azureVaultToken":        params.AzureVaultToken,
+				"azureVaultName":         params.AzureVaultName,
+				"namespace":              params.Namespace,
+				"webhookEndpoint":        params.WebhookEndpoint,
 				"webhookData":            webhookData,
 			},
 		},
@@ -105,10 +81,10 @@ func CreateK8sApplication(paramsConfig *constants.ParamsConfig, kanikoJobResourc
 
 	// create the custom resource in the specified namespace
 	ctx := context.TODO()
-	existingResource, err := dynamicClient.Resource(applicationGVR).Namespace(paramsConfig.Namespace).Get(ctx, applicationInstance.GetName(), metav1.GetOptions{})
+	existingResource, err := dynamicClient.Resource(applicationGVR).Namespace(params.Namespace).Get(ctx, applicationInstance.GetName(), metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
-			applicationResource, err := dynamicClient.Resource(applicationGVR).Namespace(paramsConfig.Namespace).Create(ctx, applicationInstance, metav1.CreateOptions{})
+			applicationResource, err := dynamicClient.Resource(applicationGVR).Namespace(params.Namespace).Create(ctx, applicationInstance, metav1.CreateOptions{})
 			if err != nil {
 				fmt.Println(err)
 				return "", err
@@ -123,12 +99,12 @@ func CreateK8sApplication(paramsConfig *constants.ParamsConfig, kanikoJobResourc
 	for key, value := range applicationInstance.Object {
 		existingResource.Object[key] = value
 	}
-	updatedResource, err := dynamicClient.Resource(applicationGVR).Namespace(paramsConfig.Namespace).Update(ctx, existingResource, metav1.UpdateOptions{})
+	updatedResource, err := dynamicClient.Resource(applicationGVR).Namespace(params.Namespace).Update(ctx, existingResource, metav1.UpdateOptions{})
 	if err != nil {
 		fmt.Println(err)
 		return "", err
 		// panic(err.Error())
 	}
-	fmt.Printf("Created custom resource %s in namespace %s\n", updatedResource.GetName(), paramsConfig.Namespace)
+	fmt.Printf("Created custom resource %s in namespace %s\n", updatedResource.GetName(), params.Namespace)
 	return updatedResource.GetName(), nil
 }
