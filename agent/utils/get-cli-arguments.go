@@ -8,7 +8,7 @@ import (
 
 func ParseCLIArguments() *constants.ParamsConfig {
 	config := &constants.ParamsConfig{}
-	flag.StringVar(&config.SecretsProvider, "secretsProvider", "", "This is a required parameter which can have 2 values either aws or azure and it represents the main secrets provider to be used.")
+	flag.StringVar(&config.SecretsProvider, "secretsProvider", "", "This is an optional parameter which can have 2 values either aws or azure and it represents the main secrets provider to be used(by default it would be same as cloud provider).")
 	flag.StringVar(&config.EcrCredentials, "ecrCredentials", "", "This is an optional parameter and it would only be passed when the artifactsRegistryProvider is aws and it represents the credentials for the AWS ECR registry.")
 	flag.StringVar(&config.DockerHubCredentials, "dockerHubCredentials", "", "This is an optional parameter and it would only be passed when the artifactsRegistryProvider is dockerhub and it represents the credentials for the dockerhub registry.")
 	flag.StringVar(&config.AcrCredentials, "acrCredentials", "", "This is an optional parameter and it would only be passed when the artifactsRegistryProvider is azure and it represents the credentials for the Azure ACR registry.")
