@@ -67,7 +67,6 @@ type ParamsConfig struct {
 	AzureVaultCredentials     string
 	ArtifactsRegistryProvider string
 	CloudProvider             string
-	AzureManagementScopeToken string
 	SourceCodeRepositoryName  string
 	SourceCodeProvider        string
 	SourceCodeToken           string
@@ -75,12 +74,7 @@ type ParamsConfig struct {
 	CommitId                  string
 	DockerManifest            string
 	ArtifactsRepositoryName   string
-	AwsEcrRegistryUrl         string
 	K8sAppName                string
-	AzureAcrRegistryName      string
-	AwsEcrUserName            string
-	AzureSubscriptionId       string
-	AzureResourceGroupName    string
 	UseDockerFromCodeFlag     bool
 	DeploymentYamlManifest    string
 	IngressYamlManifest       string
@@ -88,10 +82,8 @@ type ParamsConfig struct {
 	ManagedBy                 string `default:"Humalect"`
 	CloudRegion               string
 	K8sResourcesIdentifier    string
-	AzureVaultToken           string
 	SecretManagerName         string
 	Namespace                 string `default:"default"`
-	AzureVaultName            string
 	DeploymentId              string
 	WebhookEndpoint           string
 	WebhookData               string

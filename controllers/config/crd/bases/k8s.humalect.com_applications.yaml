@@ -45,10 +45,6 @@ spec:
                   type: object
                 secretsProvider:
                   type: string
-                azureVaultName:
-                  type: string
-                azureVaultToken:
-                  type: string
                 cloudProvider:
                   type: string
                 k8sResourcesIdentifier:
