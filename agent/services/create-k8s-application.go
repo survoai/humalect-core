@@ -17,11 +17,11 @@ import (
 )
 
 func CreateK8sApplication(params *constants.ParamsConfig, kanikoJobResources CreateJobConfig, webhookData string) (string, error) {
-	awsSecretCredentials := utils.UnmarshalStrings(params.AwsSecretCredentials).(constants.AwsSecretCredentials)
-	azureVaultCredentials := utils.UnmarshalStrings(params.AzureVaultCredentials).(constants.AzureVaultCredentials)
-	deploymentYamlManifest := utils.UnmarshalStrings(params.DeploymentYamlManifest).(constants.DeploymentYamlManifestType)
-	serviceYamlManifest := utils.UnmarshalStrings(params.ServiceYamlManifest).(constants.ServiceYamlManifestType)
-	ingressYamlManifest := utils.UnmarshalStrings(params.IngressYamlManifest).(constants.IngressYamlManifestType)
+	awsSecretCredentials, _ := utils.UnmarshalStrings(params.AwsSecretCredentials).(constants.AwsSecretCredentials)
+	azureVaultCredentials, _ := utils.UnmarshalStrings(params.AzureVaultCredentials).(constants.AzureVaultCredentials)
+	deploymentYamlManifest, _ := utils.UnmarshalStrings(params.DeploymentYamlManifest).(constants.DeploymentYamlManifestType)
+	serviceYamlManifest, _ := utils.UnmarshalStrings(params.ServiceYamlManifest).(constants.ServiceYamlManifestType)
+	ingressYamlManifest, _ := utils.UnmarshalStrings(params.IngressYamlManifest).(constants.IngressYamlManifestType)
 
 	deploymentYamlManifest.Spec.Template.Spec.ImagePullSecrets = []corev1.LocalObjectReference{{Name: kanikoJobResources.CloudProviderSecretName}}
 

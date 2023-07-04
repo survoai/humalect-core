@@ -11,7 +11,7 @@ import (
 )
 
 func CreateEcrSecret(params constants.ParamsConfig, clientSet *kubernetes.Clientset) (string, error) {
-	ecrCredentials := utils.UnmarshalStrings(params.EcrCredentials).(constants.EcrCredentials)
+	ecrCredentials, _ := utils.UnmarshalStrings(params.EcrCredentials).(constants.EcrCredentials)
 	ecrToken, err := getEcrLoginToken(ecrCredentials.AccessKey, ecrCredentials.SecretKey, ecrCredentials.Region)
 	if err != nil {
 		log.Fatalf("Error getting ECR token: %v", err)
