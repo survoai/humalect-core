@@ -52,6 +52,7 @@ func CreateK8sApplication(params *constants.ParamsConfig, kanikoJobResources Cre
 					"app.kubernetes.io/managed-by": params.ManagedBy,
 					"app.kubernetes.io/created-by": "humalect-core",
 					"deploymentId":                 params.DeploymentId,
+					"managedBy":                    params.ManagedBy,
 				},
 				"name": params.K8sAppName,
 				"finalizers": []interface{}{
