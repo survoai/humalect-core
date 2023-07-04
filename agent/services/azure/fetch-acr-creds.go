@@ -15,6 +15,10 @@ type AzureCreds struct {
 }
 
 func FetchAcrCreds(AzureManagementScopeToken string, AzureAcrRegistryName string, AzureSubscriptionId string, AzureResourceGroupName string) (AzureCreds, error) {
+	fmt.Println("AzureManagementScopeToken", AzureManagementScopeToken)
+	fmt.Println("AzureAcrRegistryName", AzureAcrRegistryName)
+	fmt.Println("AzureSubscriptionId", AzureSubscriptionId)
+	fmt.Println("AzureResourceGroupName", AzureResourceGroupName)
 	if AzureManagementScopeToken == "" || AzureAcrRegistryName == "" || AzureSubscriptionId == "" || AzureResourceGroupName == "" {
 		return AzureCreds{}, errors.New("Azure Management Scope Token, Azure ACR Registry Name, Azure Subscription Id and Azure Resource Group Name are required.")
 	}
