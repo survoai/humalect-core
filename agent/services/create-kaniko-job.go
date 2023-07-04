@@ -121,9 +121,9 @@ func getDockerFileConfig(clientset *kubernetes.Clientset, params constants.Param
 						params.ManagedBy[:int(math.Min(float64(len(params.ManagedBy)), float64(10)))],
 						params.CommitId[:int(math.Min(float64(len(params.CommitId)), float64(5)))],
 						params.DeploymentId[:int(math.Min(float64(len(params.DeploymentId)), float64(7)))]),
-					"DeploymentId": params.DeploymentId,
-					"ManagedBy":    params.ManagedBy,
-					"CommitId":     params.CommitId,
+					"deploymentId": params.DeploymentId,
+					"managedBy":    params.ManagedBy,
+					"commitId":     params.CommitId,
 				},
 			},
 			Data: map[string]string{
@@ -276,9 +276,9 @@ func getKanikoJobObject(
 		Template: corev1.PodTemplateSpec{
 			ObjectMeta: metav1.ObjectMeta{
 				Labels: map[string]string{
-					"DeploymentId": params.DeploymentId,
-					"ManagedBy":    params.ManagedBy,
-					"CommitId":     params.CommitId,
+					"deploymentId": params.DeploymentId,
+					"managedBy":    params.ManagedBy,
+					"commitId":     params.CommitId,
 				},
 			},
 			Spec: podSpec,
@@ -300,9 +300,9 @@ func getKanikoJobObject(
 					params.ManagedBy[:int(math.Min(float64(len(params.ManagedBy)), float64(10)))],
 					params.CommitId[:int(math.Min(float64(len(params.CommitId)), float64(5)))],
 					params.DeploymentId[:int(math.Min(float64(len(params.DeploymentId)), float64(7)))]),
-				"DeploymentId": params.DeploymentId,
-				"ManagedBy":    params.ManagedBy,
-				"CommitId":     params.CommitId,
+				"deploymentId": params.DeploymentId,
+				"managedBy":    params.ManagedBy,
+				"commitId":     params.CommitId,
 			},
 			Namespace: "humalect",
 		},
