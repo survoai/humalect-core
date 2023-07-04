@@ -56,8 +56,6 @@ type ApplicationSpec struct {
 	IngressYamlManifest    IngressYamlManifestType    `json:"ingressYamlManifest"`
 	SecretManagerName      string                     `json:"secretManagerName,omitempty"`
 	ManagedBy              string                     `json:"managedBy,omitempty"`
-	AzureVaultToken        string                     `json:"azureVaultToken,omitempty"`
-	AzureVaultName         string                     `json:"azureVaultName"`
 	Namespace              string                     `json:"namespace"`
 	WebhookEndpoint        string                     `json:"webhookEndpoint"`
 	WebhookData            string                     `json:"webhookData"`

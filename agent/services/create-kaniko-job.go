@@ -13,6 +13,7 @@ import (
 	"github.com/Humalect/humalect-core/agent/services/aws"
 	"github.com/Humalect/humalect-core/agent/services/azure"
 	"github.com/Humalect/humalect-core/agent/services/dockerhub"
+	"github.com/Humalect/humalect-core/agent/utils"
 
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -74,7 +75,7 @@ func createArtifactsSecret(clientset *kubernetes.Clientset, params constants.Par
 		return aws.CreateEcrSecret(params, clientset)
 	} else if params.ArtifactsRegistryProvider == constants.RegistryIdDockerhub {
 		return dockerhub.CreateSecret(params, clientset)
-	} else if params.ArtifactsRegistryProvider == constants.RegistryIdAzure {
+	} else if params.ArtifactsRegistryProvider == constants.RegistryIdAzure || (params.ArtifactsRegistryProvider == "" && params.CloudProvider == constants.CloudIdAzure) {
 		return azure.CreateAcrSecret(params, clientset)
 	} else {
 		fmt.Println("Invalid Artifacts Registry Provider received.")
@@ -145,11 +146,14 @@ func getKanikoJobObject(
 	params constants.ParamsConfig,
 ) (batchv1.Job, error) {
 	var artifactsRepoUrl string
-	if params.ArtifactsRegistryProvider == constants.RegistryIdAzure {
-		artifactsRepoUrl = fmt.Sprintf("%s.azurecr.io/%s:%s", params.AzureAcrRegistryName, params.
+	if params.ArtifactsRegistryProvider == constants.RegistryIdAzure || (params.ArtifactsRegistryProvider == "" && params.CloudProvider == constants.CloudIdAzure) {
+		acrCredentials := utils.UnmarshalStrings(params.AcrCredentials).(constants.AcrCredentials)
+
+		artifactsRepoUrl = fmt.Sprintf("%s.azurecr.io/%s:%s", acrCredentials.RegistryName, params.
 			ArtifactsRepositoryName, params.CommitId)
-	} else if params.ArtifactsRegistryProvider == constants.RegistryIdAWS {
-		artifactsRepoUrl = fmt.Sprintf("%s/%s:%s", params.AwsEcrRegistryUrl, params.
+	} else if params.ArtifactsRegistryProvider == constants.RegistryIdAWS || (params.ArtifactsRegistryProvider == "" && params.CloudProvider == constants.CloudIdAWS) {
+		ecrCredentials := utils.UnmarshalStrings(params.EcrCredentials).(constants.EcrCredentials)
+		artifactsRepoUrl = fmt.Sprintf("%s/%s:%s", ecrCredentials.RegistryUrl, params.
 			ArtifactsRepositoryName, params.CommitId)
 	} else if params.ArtifactsRegistryProvider == constants.RegistryIdDockerhub {
 		var dockerHubCreds constants.DockerHubCredentials

@@ -70,8 +70,6 @@ func CreateK8sApplication(params *constants.ParamsConfig, kanikoJobResources Cre
 				"ingressYamlManifest":    ingressYamlManifest,
 				"secretManagerName":      params.SecretManagerName,
 				"managedBy":              params.ManagedBy,
-				"azureVaultToken":        params.AzureVaultToken,
-				"azureVaultName":         params.AzureVaultName,
 				"namespace":              params.Namespace,
 				"webhookEndpoint":        params.WebhookEndpoint,
 				"webhookData":            webhookData,

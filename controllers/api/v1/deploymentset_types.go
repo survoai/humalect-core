@@ -78,15 +78,7 @@ type DeploymentSetSpec struct {
 	DockerManifest            []string                   `json:"dockerManifest,omitempty"`
 	SecretManagerName         string                     `json:"secretManagerName,omitempty"`
 	ManagedBy                 string                     `json:"managedBy,omitempty"`
-	AzureVaultToken           string                     `json:"azureVaultToken,omitempty"`
-	AzureVaultName            string                     `json:"azureVaultName,omitempty"`
-	AzureResourceGroupName    string                     `json:"azureResourceGroupName,omitempty"`
-	AzureSubscriptionId       string                     `json:"azureSubscriptionId,omitempty"`
-	AzureAcrRegistryName      string                     `json:"azureAcrRegistryName,omitempty"`
-	AzureManagementScopeToken string                     `json:"azureManagementScopeToken,omitempty"`
-	AwsEcrUserName            string                     `json:"awsEcrUserName,omitempty"`
 	UseDockerFromCodeFlag     bool                       `json:"useDockerFromCodeFlag,omitempty"`
-	AwsEcrRegistryUrl         string                     `json:"awsEcrRegistryUrl,omitempty"`
 	JobName                   string                     `json:"jobName"`
 	K8sAppName                string                     `json:"k8sAppName"`
 	Namespace                 string                     `json:"namespace"`

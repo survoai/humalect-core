@@ -20,12 +20,6 @@ import (
 )
 
 func PushDockerImage(cloudProvider string,
-	awsEcrUserName string,
-	awsEcrRegistryUrl string,
-	azureSubscriptionId string,
-	azureResourceGroupName string,
-	azureManagementScopeToken string,
-	azureAcrRegistryName string,
 	artifactsRepoLink string,
 ) error {
 	type ArtifactsRegistryCredentials struct {
@@ -70,15 +64,15 @@ func PushDockerImage(cloudProvider string,
 		}
 
 		artifactsRegistryCredentials = ArtifactsRegistryCredentials{
-			Username:      awsEcrUserName,
+			Username:      "awsEcrUserName",
 			Password:      tokenParts[1],
-			ServerAddress: awsEcrRegistryUrl,
+			ServerAddress: "awsEcrRegistryUrl",
 		}
 
 	} else if cloudProvider == "azure" {
 
 		url := fmt.Sprintf("https://management.azure.com/subscriptions/%s/resourceGroups/%s/providers/Microsoft.ContainerRegistry/registries/%s/listCredentials?api-version=2019-05-01",
-			azureSubscriptionId, azureResourceGroupName, azureAcrRegistryName)
+			"azureSubscriptionId", "azureResourceGroupName", "azureAcrRegistryName")
 
 		client := &http.Client{}
 
@@ -88,7 +82,7 @@ func PushDockerImage(cloudProvider string,
 			return err
 		}
 
-		req.Header.Set("Authorization", "Bearer "+azureManagementScopeToken)
+		req.Header.Set("Authorization", "Bearer "+"azureManagementScopeToken")
 		req.Header.Set("Content-Type", "application/json")
 
 		resp, err := client.Do(req)
@@ -124,7 +118,7 @@ func PushDockerImage(cloudProvider string,
 		artifactsRegistryCredentials = ArtifactsRegistryCredentials{
 			Username:      data.Username,
 			Password:      data.Passwords[0].Value,
-			ServerAddress: azureAcrRegistryName + ".azurecr.io",
+			ServerAddress: "azureAcrRegistryName" + ".azurecr.io",
 		}
 
 	} else {
