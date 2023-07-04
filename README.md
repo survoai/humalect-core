@@ -14,3 +14,22 @@ The primary goal of **humalect-core** is to simplify the complexities of integra
 - **Automated Deployment:** Deploys the Docker image to the Kubernetes cluster, offering a complete and autonomous CI/CD pipeline.
 - **Scalability and Resilience:** Leverages the scalability and resilience of Kubernetes, ensuring your CI/CD pipeline is as robust as your production environment.
 - **Intuitive Setup:** Enables easy setup and configuration using Kubernetes-native yaml files.
+
+## Repository Structure
+
+The **humalect-core** repository is organized into two primary directories:
+
+- **agent:** This directory contains the source code for a Dockerized Golang application responsible for the build, push, and deployment processes. It essentially forms the engine of our CI/CD pipeline.
+
+- **controllers:** This directory hosts the code for a Kubernetes Custom Resource Definition (CRD) controller. The CRD controller is designed to detect and respond to changes in the custom resources related to build and deployment processes.
+
+The repository structure is as follows:
+```
+humalect-core
+│
+├── agent
+│ ├── [files and folders related to Dockerized Golang application]
+│
+└── controllers
+| ├── [files and folders related to the CRD controller]
+```
