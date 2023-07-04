@@ -14,7 +14,13 @@ func FetchDockerHubSecretKey(params constants.ParamsConfig) (string, error) {
 	dockerHubCreds := utils.UnmarshalStrings(params.DockerHubCredentials).(constants.DockerHubCredentials)
 	if params.SecretsProvider == constants.CloudIdAWS || (params.SecretsProvider == "" && params.CloudProvider == constants.CloudIdAWS) {
 		awsSecretCredentials := utils.UnmarshalStrings(params.AwsSecretCredentials).(constants.AwsSecretCredentials)
-		return aws.GetSecretValue(dockerHubCreds.SecretName, awsSecretCredentials.AccessKey, awsSecretCredentials.SecretKey, awsSecretCredentials.Region)
+		region := ""
+		if params.SecretsProvider == "" && params.CloudProvider == constants.CloudIdAWS {
+			region = params.CloudRegion
+		} else {
+			region = awsSecretCredentials.Region
+		}
+		return aws.GetSecretValue(dockerHubCreds.SecretName, awsSecretCredentials.AccessKey, awsSecretCredentials.SecretKey, region, params.CloudProvider)
 	} else if params.SecretsProvider == constants.CloudIdAzure || (params.SecretsProvider == "" && params.CloudProvider == constants.CloudIdAzure) {
 		azureVaultCredentials := utils.UnmarshalStrings(params.AzureVaultCredentials).(constants.AzureVaultCredentials)
 		secretData, err := azure.GetSecretValue(azureVaultCredentials.Token, azureVaultCredentials.Name, dockerHubCreds.SecretName)
