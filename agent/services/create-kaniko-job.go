@@ -147,12 +147,12 @@ func getKanikoJobObject(
 ) (batchv1.Job, error) {
 	var artifactsRepoUrl string
 	if params.ArtifactsRegistryProvider == constants.RegistryIdAzure || (params.ArtifactsRegistryProvider == "" && params.CloudProvider == constants.CloudIdAzure) {
-		acrCredentials := utils.UnmarshalStrings(params.AcrCredentials).(constants.AcrCredentials)
+		acrCredentials, _ := utils.UnmarshalStrings(params.AcrCredentials).(constants.AcrCredentials)
 
 		artifactsRepoUrl = fmt.Sprintf("%s.azurecr.io/%s:%s", acrCredentials.RegistryName, params.
 			ArtifactsRepositoryName, params.CommitId)
 	} else if params.ArtifactsRegistryProvider == constants.RegistryIdAWS || (params.ArtifactsRegistryProvider == "" && params.CloudProvider == constants.CloudIdAWS) {
-		ecrCredentials := utils.UnmarshalStrings(params.EcrCredentials).(constants.EcrCredentials)
+		ecrCredentials, _ := utils.UnmarshalStrings(params.EcrCredentials).(constants.EcrCredentials)
 		artifactsRepoUrl = fmt.Sprintf("%s/%s:%s", ecrCredentials.RegistryUrl, params.
 			ArtifactsRepositoryName, params.CommitId)
 	} else if params.ArtifactsRegistryProvider == constants.RegistryIdDockerhub {
