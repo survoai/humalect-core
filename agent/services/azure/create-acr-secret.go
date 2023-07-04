@@ -11,7 +11,9 @@ import (
 )
 
 func CreateAcrSecret(params constants.ParamsConfig, clientSet *kubernetes.Clientset) (string, error) {
-	acrCredentials, _ := utils.UnmarshalStrings(params.AcrCredentials).(constants.AcrCredentials)
+	acrCredentials, e := utils.UnmarshalStrings(params.AcrCredentials).(constants.AcrCredentials)
+	fmt.Println(e)
+	fmt.Println(acrCredentials)
 	azureCreds, err := FetchAcrCreds(acrCredentials.ManagementScopeToken, acrCredentials.RegistryName,
 		acrCredentials.SubscriptionId, acrCredentials.ResourceGroupName)
 	if err != nil {
