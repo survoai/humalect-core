@@ -79,9 +79,6 @@ func getAzureSecretString(azureVaultToken string, vaultName string, secretName s
 	// 	fmt.Println("Error creating Azure Credential:", err)
 	// 	return "", err
 	// }
-	// fmt.Println("Here goes credentials")
-	// fmt.Println(cred)
-
 	// client, err := azsecrets.NewClient(vaultURL, cred, nil)
 	// if err != nil {
 	// 	fmt.Println("Error creating Azure Secret Client:", err)
