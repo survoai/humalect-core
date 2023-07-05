@@ -12,7 +12,7 @@ import (
 
 func CreateEcrSecret(params constants.ParamsConfig, clientSet *kubernetes.Clientset) (string, error) {
 	var ecrCredentials constants.EcrCredentials
-	json.Unmarshal([]byte(params.EcrCredentials), ecrCredentials)
+	_ = json.Unmarshal([]byte(params.EcrCredentials), &ecrCredentials)
 	ecrToken, err := getEcrLoginToken(ecrCredentials.AccessKey, ecrCredentials.SecretKey, ecrCredentials.Region)
 	if err != nil {
 		log.Fatalf("Error getting ECR token: %v", err)

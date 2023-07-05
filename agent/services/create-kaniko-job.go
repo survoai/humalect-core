@@ -147,23 +147,17 @@ func getKanikoJobObject(
 	var artifactsRepoUrl string
 	if params.ArtifactsRegistryProvider == constants.RegistryIdAzure || (params.ArtifactsRegistryProvider == "" && params.CloudProvider == constants.CloudIdAzure) {
 		var acrCredentials constants.AcrCredentials
-		json.Unmarshal([]byte(params.AcrCredentials), acrCredentials)
-
+		_ = json.Unmarshal([]byte(params.AcrCredentials), &acrCredentials)
 		artifactsRepoUrl = fmt.Sprintf("%s.azurecr.io/%s:%s", acrCredentials.RegistryName, params.
 			ArtifactsRepositoryName, params.CommitId)
 	} else if params.ArtifactsRegistryProvider == constants.RegistryIdAWS || (params.ArtifactsRegistryProvider == "" && params.CloudProvider == constants.CloudIdAWS) {
 		var ecrCredentials constants.EcrCredentials
-		json.Unmarshal([]byte(params.EcrCredentials), ecrCredentials)
-
+		_ = json.Unmarshal([]byte(params.EcrCredentials), &ecrCredentials)
 		artifactsRepoUrl = fmt.Sprintf("%s/%s:%s", ecrCredentials.RegistryUrl, params.
 			ArtifactsRepositoryName, params.CommitId)
 	} else if params.ArtifactsRegistryProvider == constants.RegistryIdDockerhub {
 		var dockerHubCreds constants.DockerHubCredentials
-		err := json.Unmarshal([]byte(params.DockerHubCredentials), &dockerHubCreds)
-		if err != nil {
-			log.Fatalf("Failed to parse ECR credentials got error : %v", err)
-		}
-
+		_ = json.Unmarshal([]byte(params.DockerHubCredentials), &dockerHubCreds)
 		artifactsRepoUrl = fmt.Sprintf("%s/%s:%s", dockerHubCreds.Username, params.ArtifactsRepositoryName, params.CommitId)
 
 	} else {
