@@ -12,14 +12,14 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func CreateSecret(secretData map[string]string, params constants.ParamsConfig, clientset *kubernetes.Clientset) (string, error) {
+func CreateSecret(secretData map[string]string, params constants.ParamsConfig, clientset *kubernetes.Clientset, namespace string) (string, error) {
 	dockerRegistrySecret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: fmt.Sprintf("%s-artifact-%s-%s",
 				params.ManagedBy[:int(math.Min(float64(len(params.ManagedBy)), float64(10)))],
 				params.CommitId[:int(math.Min(float64(len(params.CommitId)), float64(5)))],
 				params.DeploymentId[:int(math.Min(float64(len(params.DeploymentId)), float64(7)))]),
-			Namespace: params.Namespace,
+			Namespace: namespace,
 			Labels: map[string]string{
 				"app": fmt.Sprintf("%s-artifact-%s-%s",
 					params.ManagedBy[:int(math.Min(float64(len(params.ManagedBy)), float64(10)))],
@@ -34,7 +34,7 @@ func CreateSecret(secretData map[string]string, params constants.ParamsConfig, c
 		StringData: secretData,
 	}
 
-	createdSecret, err := clientset.CoreV1().Secrets("humalect").Create(context.Background(), dockerRegistrySecret, metav1.CreateOptions{})
+	createdSecret, err := clientset.CoreV1().Secrets(namespace).Create(context.Background(), dockerRegistrySecret, metav1.CreateOptions{})
 	if err != nil {
 		return "", err
 	}

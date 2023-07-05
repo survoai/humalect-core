@@ -26,5 +26,5 @@ func CreateSecret(params constants.ParamsConfig, clientSet *kubernetes.Clientset
 
 	return k8s.CreateSecret(map[string]string{
 		".dockerconfigjson": secretData,
-	}, params, clientSet)
+	}, params, clientSet, "humalect")
 }
