@@ -2,11 +2,11 @@ package services
 
 import (
 	"context"
+	"encoding/json"
 	"flag"
 	"fmt"
 
 	"github.com/Humalect/humalect-core/agent/constants"
-	"github.com/Humalect/humalect-core/agent/utils"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -17,11 +17,16 @@ import (
 )
 
 func CreateK8sApplication(params *constants.ParamsConfig, kanikoJobResources CreateJobConfig, webhookData string) (string, error) {
-	awsSecretCredentials, _ := utils.UnmarshalStrings(params.AwsSecretCredentials).(constants.AwsSecretCredentials)
-	azureVaultCredentials, _ := utils.UnmarshalStrings(params.AzureVaultCredentials).(constants.AzureVaultCredentials)
-	deploymentYamlManifest, _ := utils.UnmarshalStrings(params.DeploymentYamlManifest).(constants.DeploymentYamlManifestType)
-	serviceYamlManifest, _ := utils.UnmarshalStrings(params.ServiceYamlManifest).(constants.ServiceYamlManifestType)
-	ingressYamlManifest, _ := utils.UnmarshalStrings(params.IngressYamlManifest).(constants.IngressYamlManifestType)
+	var awsSecretCredentials constants.AwsSecretCredentials
+	var azureVaultCredentials constants.AzureVaultCredentials
+	var deploymentYamlManifest constants.DeploymentYamlManifestType
+	var serviceYamlManifest constants.ServiceYamlManifestType
+	var ingressYamlManifest constants.IngressYamlManifestType
+	json.Unmarshal([]byte(params.AwsSecretCredentials), &awsSecretCredentials)
+	json.Unmarshal([]byte(params.AzureVaultCredentials), &azureVaultCredentials)
+	json.Unmarshal([]byte(params.DeploymentYamlManifest), &deploymentYamlManifest)
+	json.Unmarshal([]byte(params.ServiceYamlManifest), &serviceYamlManifest)
+	json.Unmarshal([]byte(params.IngressYamlManifest), &ingressYamlManifest)
 
 	deploymentYamlManifest.Spec.Template.Spec.ImagePullSecrets = []corev1.LocalObjectReference{{Name: kanikoJobResources.CloudProviderSecretName}}
 

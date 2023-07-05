@@ -13,7 +13,6 @@ import (
 	"github.com/Humalect/humalect-core/agent/services/aws"
 	"github.com/Humalect/humalect-core/agent/services/azure"
 	"github.com/Humalect/humalect-core/agent/services/dockerhub"
-	"github.com/Humalect/humalect-core/agent/utils"
 
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -147,12 +146,15 @@ func getKanikoJobObject(
 ) (batchv1.Job, error) {
 	var artifactsRepoUrl string
 	if params.ArtifactsRegistryProvider == constants.RegistryIdAzure || (params.ArtifactsRegistryProvider == "" && params.CloudProvider == constants.CloudIdAzure) {
-		acrCredentials, _ := utils.UnmarshalStrings(params.AcrCredentials).(constants.AcrCredentials)
+		var acrCredentials constants.AcrCredentials
+		json.Unmarshal([]byte(params.AcrCredentials), acrCredentials)
 
 		artifactsRepoUrl = fmt.Sprintf("%s.azurecr.io/%s:%s", acrCredentials.RegistryName, params.
 			ArtifactsRepositoryName, params.CommitId)
 	} else if params.ArtifactsRegistryProvider == constants.RegistryIdAWS || (params.ArtifactsRegistryProvider == "" && params.CloudProvider == constants.CloudIdAWS) {
-		ecrCredentials, _ := utils.UnmarshalStrings(params.EcrCredentials).(constants.EcrCredentials)
+		var ecrCredentials constants.EcrCredentials
+		json.Unmarshal([]byte(params.EcrCredentials), ecrCredentials)
+
 		artifactsRepoUrl = fmt.Sprintf("%s/%s:%s", ecrCredentials.RegistryUrl, params.
 			ArtifactsRepositoryName, params.CommitId)
 	} else if params.ArtifactsRegistryProvider == constants.RegistryIdDockerhub {

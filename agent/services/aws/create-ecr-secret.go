@@ -1,17 +1,18 @@
 package aws
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 
 	"github.com/Humalect/humalect-core/agent/constants"
 	"github.com/Humalect/humalect-core/agent/services/k8s"
-	"github.com/Humalect/humalect-core/agent/utils"
 	"k8s.io/client-go/kubernetes"
 )
 
 func CreateEcrSecret(params constants.ParamsConfig, clientSet *kubernetes.Clientset) (string, error) {
-	ecrCredentials, _ := utils.UnmarshalStrings(params.EcrCredentials).(constants.EcrCredentials)
+	var ecrCredentials constants.EcrCredentials
+	json.Unmarshal([]byte(params.EcrCredentials), ecrCredentials)
 	ecrToken, err := getEcrLoginToken(ecrCredentials.AccessKey, ecrCredentials.SecretKey, ecrCredentials.Region)
 	if err != nil {
 		log.Fatalf("Error getting ECR token: %v", err)
