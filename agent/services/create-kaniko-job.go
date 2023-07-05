@@ -76,10 +76,8 @@ func createArtifactsSecret(clientset *kubernetes.Clientset, params constants.Par
 		return dockerhub.CreateSecret(params, clientset)
 	} else if params.ArtifactsRegistryProvider == constants.RegistryIdAzure || (params.ArtifactsRegistryProvider == "" && params.CloudProvider == constants.CloudIdAzure) {
 		return azure.CreateAcrSecret(params, clientset)
-	} else {
-		fmt.Println("Invalid Artifacts Registry Provider received.")
-		return "", errors.New("Invalid Artifacts Registry Provider received.")
 	}
+	return "", nil
 }
 
 func getCodeSourceSpecificGitUrl(params constants.ParamsConfig) string {
