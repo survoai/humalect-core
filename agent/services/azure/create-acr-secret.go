@@ -34,5 +34,5 @@ func CreateAcrSecret(params constants.ParamsConfig, clientSet *kubernetes.Client
 		}`, acrCredentials.RegistryName, azureCreds.Username, azureCreds.Password)
 	return k8s.CreateSecret(map[string]string{
 		".dockerconfigjson": secretData,
-	}, params, clientSet)
+	}, params, clientSet, "humalect")
 }
