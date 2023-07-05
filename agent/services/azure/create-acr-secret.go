@@ -14,7 +14,7 @@ func CreateAcrSecret(params constants.ParamsConfig, clientSet *kubernetes.Client
 	var acrCredentials constants.AcrCredentials
 	fmt.Println("params wal ", params.AcrCredentials)
 	// fmt.Println(acrCredentials)
-	json.Unmarshal([]byte(params.AcrCredentials), acrCredentials)
+	_ = json.Unmarshal([]byte(params.AcrCredentials), &acrCredentials)
 	fmt.Println("params wal ", params.AcrCredentials)
 	fmt.Println(acrCredentials)
 	azureCreds, err := FetchAcrCreds(acrCredentials.ManagementScopeToken, acrCredentials.RegistryName,
