@@ -1,17 +1,20 @@
 package azure
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 
 	"github.com/Humalect/humalect-core/agent/constants"
 	"github.com/Humalect/humalect-core/agent/services/k8s"
-	"github.com/Humalect/humalect-core/agent/utils"
 	"k8s.io/client-go/kubernetes"
 )
 
 func CreateAcrSecret(params constants.ParamsConfig, clientSet *kubernetes.Clientset) (string, error) {
-	acrCredentials := utils.UnmarshalStrings(params.AcrCredentials).(constants.AcrCredentials)
+	var acrCredentials constants.AcrCredentials
+	fmt.Println("params wal ", params.AcrCredentials)
+	// fmt.Println(acrCredentials)
+	json.Unmarshal([]byte(params.AcrCredentials), acrCredentials)
 	fmt.Println("params wal ", params.AcrCredentials)
 	fmt.Println(acrCredentials)
 	azureCreds, err := FetchAcrCreds(acrCredentials.ManagementScopeToken, acrCredentials.RegistryName,
