@@ -25,7 +25,7 @@ func GetCloudSecretMap(application *k8sv1.Application) (map[string]string, error
 	if application.Spec.SecretsProvider == constants.CloudIdAWS || (application.Spec.SecretsProvider == "" && application.Spec.CloudProvider == constants.CloudIdAWS) {
 		var awsConfig aws.Config
 		if application.Spec.SecretsProvider == "" && application.Spec.CloudProvider == constants.CloudIdAWS {
-			awsConfig, err = config.LoadDefaultConfig(context.TODO())
+			awsConfig, err = config.LoadDefaultConfig(context.TODO(), config.WithRegion(application.Spec.AwsSecretCredentials.Region))
 		} else {
 			awsConfig, err = config.LoadDefaultConfig(context.TODO(), config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(application.Spec.AwsSecretCredentials.AccessKey, application.Spec.AwsSecretCredentials.SecretKey, "")))
 		}
@@ -33,7 +33,7 @@ func GetCloudSecretMap(application *k8sv1.Application) (map[string]string, error
 			log.Fatal(err)
 			return map[string]string{}, err
 		}
-
+		
 		secretString, err = getAwsSecretString(awsConfig, application.Spec.SecretManagerName, application.Spec.AwsSecretCredentials.Region)
 
 	} else if application.Spec.SecretsProvider == constants.CloudIdAzure || (application.Spec.SecretsProvider == "" && application.Spec.CloudProvider == constants.CloudIdAzure) {
@@ -56,12 +56,11 @@ func GetCloudSecretMap(application *k8sv1.Application) (map[string]string, error
 func getAwsSecretString(config aws.Config, secretName string, region string) (string, error) {
 	// Create Secrets Manager client
 	svc := secretsmanager.NewFromConfig(config)
-
+	
 	input := &secretsmanager.GetSecretValueInput{
 		SecretId:     aws.String(secretName),
 		VersionStage: aws.String("AWSCURRENT"), // VersionStage defaults to AWSCURRENT if unspecified
 	}
-
 	result, err := svc.GetSecretValue(context.TODO(), input)
 	if err != nil {
 		log.Fatal(err.Error())
