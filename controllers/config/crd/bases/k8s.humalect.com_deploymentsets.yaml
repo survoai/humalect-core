@@ -47,7 +47,7 @@ spec:
                       type: string
                     secretKey:
                       type: string
-                    regitryUrl:
+                    registryUrl:
                       type: string
                     region:
                       type: string
