@@ -45,20 +45,21 @@ type ApplicationSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	AwsSecretCredentials   AwsSecretCredentials       `json:"awsSecretCredentials,omitempty"`
-	AzureVaultCredentials  AzureVaultCredentials      `json:"azureVaultCredentials,omitempty"`
-	CloudRegion            string                     `json:"cloudRegion,omitempty"`
-	SecretsProvider        string                     `json:"secretsProvider,omitempty"`
-	CloudProvider          string                     `json:"cloudProvider,omitempty"`
-	K8sResourcesIdentifier string                     `json:"k8sResourcesIdentifier,omitempty"`
-	DeploymentYamlManifest DeploymentYamlManifestType `json:"deploymentYamlManifest"`
-	ServiceYamlManifest    ServiceYamlManifestType    `json:"serviceYamlManifest"`
-	IngressYamlManifest    IngressYamlManifestType    `json:"ingressYamlManifest"`
-	SecretManagerName      string                     `json:"secretManagerName,omitempty"`
-	ManagedBy              string                     `json:"managedBy,omitempty"`
-	Namespace              string                     `json:"namespace"`
-	WebhookEndpoint        string                     `json:"webhookEndpoint"`
-	WebhookData            string                     `json:"webhookData"`
+	AwsSecretCredentials     AwsSecretCredentials       `json:"awsSecretCredentials,omitempty"`
+	AzureVaultCredentials    AzureVaultCredentials      `json:"azureVaultCredentials,omitempty"`
+	CloudRegion              string                     `json:"cloudRegion,omitempty"`
+	SecretsProvider          string                     `json:"secretsProvider,omitempty"`
+	CloudProvider            string                     `json:"cloudProvider,omitempty"`
+	K8sResourcesIdentifier   string                     `json:"k8sResourcesIdentifier,omitempty"`
+	DeploymentYamlManifest   DeploymentYamlManifestType `json:"deploymentYamlManifest"`
+	ServiceYamlManifest      ServiceYamlManifestType    `json:"serviceYamlManifest"`
+	IngressYamlManifest      IngressYamlManifestType    `json:"ingressYamlManifest"`
+	BuildSecretsConfig       []SecretConfig             `json:"buildSecretsConfig,omitempty"`
+	ApplicationSecretsConfig []SecretConfig             `json:"applicationSecretsConfig,omitempty"`
+	ManagedBy                string                     `json:"managedBy,omitempty"`
+	Namespace                string                     `json:"namespace"`
+	WebhookEndpoint          string                     `json:"webhookEndpoint"`
+	WebhookData              string                     `json:"webhookData"`
 }
 
 // ApplicationStatus defines the observed state of Application

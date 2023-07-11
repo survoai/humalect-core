@@ -82,11 +82,16 @@ type ParamsConfig struct {
 	ManagedBy                 string `default:"Humalect"`
 	CloudRegion               string
 	K8sResourcesIdentifier    string
-	SecretManagerName         string
+	BuildSecretsConfig        string
+	ApplicationSecretsConfig  string
 	Namespace                 string `default:"default"`
 	DeploymentId              string
 	WebhookEndpoint           string
 	WebhookData               string
+}
+type SecretConfig struct {
+	Name        string `json:"name"`
+	ContentType string `json:"contentType,omitempty"`
 }
 
 const (
@@ -106,4 +111,6 @@ const (
 	DeploymentFailed                  = "DEPLOYMENT_FAILED"
 	KanikoJobExecuted                 = "KANIKO_JOB_EXECUTED"
 	CreatedApplicationCrd             = "CREATED_APPLICATION_CRD"
+	SecretContentTypeFileMount        = "FILE_MOUNT"
+	SecretContentTypeKeyValue         = "KEY_VALUE"
 )

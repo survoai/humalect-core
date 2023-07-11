@@ -22,11 +22,15 @@ func CreateK8sApplication(params *constants.ParamsConfig, kanikoJobResources Cre
 	var deploymentYamlManifest constants.DeploymentYamlManifestType
 	var serviceYamlManifest constants.ServiceYamlManifestType
 	var ingressYamlManifest constants.IngressYamlManifestType
+	var buildSecretsConfig []constants.SecretConfig
+	var applicationSecretsConfig []constants.SecretConfig
 	json.Unmarshal([]byte(params.AwsSecretCredentials), &awsSecretCredentials)
 	json.Unmarshal([]byte(params.AzureVaultCredentials), &azureVaultCredentials)
 	json.Unmarshal([]byte(params.DeploymentYamlManifest), &deploymentYamlManifest)
 	json.Unmarshal([]byte(params.ServiceYamlManifest), &serviceYamlManifest)
 	json.Unmarshal([]byte(params.IngressYamlManifest), &ingressYamlManifest)
+	json.Unmarshal([]byte(params.BuildSecretsConfig), &buildSecretsConfig)
+	json.Unmarshal([]byte(params.ApplicationSecretsConfig), &applicationSecretsConfig)
 
 	deploymentYamlManifest.Spec.Template.Spec.ImagePullSecrets = []corev1.LocalObjectReference{{Name: kanikoJobResources.CloudProviderSecretName}}
 
@@ -65,20 +69,21 @@ func CreateK8sApplication(params *constants.ParamsConfig, kanikoJobResources Cre
 				},
 			},
 			"spec": map[string]interface{}{
-				"secretsProvider":        params.SecretsProvider,
-				"awsSecretCredentials":   awsSecretCredentials,
-				"azureVaultCredentials":  azureVaultCredentials,
-				"cloudRegion":            params.CloudRegion,
-				"cloudProvider":          params.CloudProvider,
-				"k8sResourcesIdentifier": params.K8sResourcesIdentifier,
-				"deploymentYamlManifest": deploymentYamlManifest,
-				"serviceYamlManifest":    serviceYamlManifest,
-				"ingressYamlManifest":    ingressYamlManifest,
-				"secretManagerName":      params.SecretManagerName,
-				"managedBy":              params.ManagedBy,
-				"namespace":              params.Namespace,
-				"webhookEndpoint":        params.WebhookEndpoint,
-				"webhookData":            webhookData,
+				"secretsProvider":          params.SecretsProvider,
+				"awsSecretCredentials":     awsSecretCredentials,
+				"azureVaultCredentials":    azureVaultCredentials,
+				"cloudRegion":              params.CloudRegion,
+				"cloudProvider":            params.CloudProvider,
+				"k8sResourcesIdentifier":   params.K8sResourcesIdentifier,
+				"deploymentYamlManifest":   deploymentYamlManifest,
+				"serviceYamlManifest":      serviceYamlManifest,
+				"ingressYamlManifest":      ingressYamlManifest,
+				"buildSecretsConfig":       buildSecretsConfig,
+				"applicationSecretsConfig": applicationSecretsConfig,
+				"managedBy":                params.ManagedBy,
+				"namespace":                params.Namespace,
+				"webhookEndpoint":          params.WebhookEndpoint,
+				"webhookData":              webhookData,
 			},
 		},
 	}
