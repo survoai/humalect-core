@@ -18,7 +18,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
 )
 
-func GetCloudSecretMap(application *k8sv1.Application) (map[string]string, error) {
+func GetCloudSecretMap(application *k8sv1.Application, secretConfig k8sv1.SecretConfig) (map[string]string, error) {
 	var secretsMap map[string]string
 	var secretString string
 	var err error
@@ -33,11 +33,11 @@ func GetCloudSecretMap(application *k8sv1.Application) (map[string]string, error
 			log.Fatal(err)
 			return map[string]string{}, err
 		}
-		
-		secretString, err = getAwsSecretString(awsConfig, application.Spec.SecretManagerName, application.Spec.AwsSecretCredentials.Region)
+
+		secretString, err = getAwsSecretString(awsConfig, secretConfig.Name, application.Spec.AwsSecretCredentials.Region)
 
 	} else if application.Spec.SecretsProvider == constants.CloudIdAzure || (application.Spec.SecretsProvider == "" && application.Spec.CloudProvider == constants.CloudIdAzure) {
-		secretString, err = getAzureSecretString(application.Spec.AzureVaultCredentials.Token, application.Spec.AzureVaultCredentials.Name, application.Spec.SecretManagerName)
+		secretString, err = getAzureSecretString(application.Spec.AzureVaultCredentials.Token, application.Spec.AzureVaultCredentials.Name, secretConfig.Name)
 		if err != nil {
 			log.Fatal(err.Error())
 			return map[string]string{}, err
@@ -56,7 +56,7 @@ func GetCloudSecretMap(application *k8sv1.Application) (map[string]string, error
 func getAwsSecretString(config aws.Config, secretName string, region string) (string, error) {
 	// Create Secrets Manager client
 	svc := secretsmanager.NewFromConfig(config)
-	
+
 	input := &secretsmanager.GetSecretValueInput{
 		SecretId:     aws.String(secretName),
 		VersionStage: aws.String("AWSCURRENT"), // VersionStage defaults to AWSCURRENT if unspecified

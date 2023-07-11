@@ -182,8 +182,28 @@ spec:
                   type: string
                 cloudRegion:
                   type: string
-                secretManagerName:
-                  type: string
+                applicationSecretsConfig:
+                  items:
+                    properties:
+                      contentType:
+                        type: string
+                      name:
+                        type: string
+                    required:
+                      - name
+                    type: object
+                  type: array
+                buildSecretsConfig:
+                  items:
+                    properties:
+                      contentType:
+                        type: string
+                      name:
+                        type: string
+                    required:
+                      - name
+                    type: object
+                  type: array
                 serviceYamlManifest:
                   properties:
                     metadata:
