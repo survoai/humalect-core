@@ -233,7 +233,10 @@ func getKanikoJobObject(
 			VolumeSource: corev1.VolumeSource{EmptyDir: &corev1.EmptyDirVolumeSource{}},
 		})
 	}
-
+	buildArgs, err := getKanikoBuildArgs(params)
+	if err != nil {
+		return batchv1.Job{}, err
+	}
 	podSpec := corev1.PodSpec{
 		InitContainers: []corev1.Container{
 			{
@@ -252,11 +255,12 @@ func getKanikoJobObject(
 				Name:            "kaniko",
 				Image:           "gcr.io/kaniko-project/executor:latest",
 				ImagePullPolicy: corev1.PullAlways,
-				Args: []string{
-					fmt.Sprintf("--context=dir:///%s", kanikoWorkspaceName),
-					fmt.Sprintf("--dockerfile=/%s/Dockerfile", kanikoWorkspaceName),
-					fmt.Sprintf("--destination=%s", artifactsRepoUrl),
-				},
+				Args: append(
+					[]string{
+						fmt.Sprintf("--context=dir:///%s", kanikoWorkspaceName),
+						fmt.Sprintf("--dockerfile=/%s/Dockerfile", kanikoWorkspaceName),
+						fmt.Sprintf("--destination=%s", artifactsRepoUrl),
+					}, buildArgs...),
 				Env:          kanikoEnvVars,
 				VolumeMounts: kanikoVolumeMounts,
 			},
@@ -318,4 +322,18 @@ func createKanikoConfigResources(clientset *kubernetes.Clientset, params constan
 		return CreateJobConfig{}, err
 	}
 	return CreateJobConfig{CloudProviderSecretName: cloudProviderSecretName, DockerFileConfigName: dockerFileConfigName}, nil
+}
+
+func getKanikoBuildArgs(params constants.ParamsConfig) ([]string, error) {
+	secretData, err := FetchBuildSecrets(params)
+	if err != nil {
+		return []string{}, err
+	}
+	secretArgs := []string{}
+	for key, value := range secretData {
+		if value != "" {
+			secretArgs = append(secretArgs, fmt.Sprintf("--build-arg=%s=%s", key, value))
+		}
+	}
+	return secretArgs, err
 }

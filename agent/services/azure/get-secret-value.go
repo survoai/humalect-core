@@ -9,9 +9,9 @@ import (
 	"time"
 )
 
-func GetSecretValue(azureVaultToken string, vaultName string, secretName string) (string, error) {
+func GetSecretValue(azureVaultToken string, vaultName string, secretName string) (map[string]string, error) {
 	if azureVaultToken == "" || vaultName == "" || secretName == "" {
-		return "", errors.New("Azure Vault Token or Vault Name or Secret Name  is empty in DockerHub")
+		return map[string]string{}, errors.New("Azure Vault Token or Vault Name or Secret Name  is empty in DockerHub")
 	}
 	client := &http.Client{
 		Timeout: 30 * time.Second,
@@ -21,36 +21,36 @@ func GetSecretValue(azureVaultToken string, vaultName string, secretName string)
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		return "", fmt.Errorf("error creating request: %v", err)
+		return map[string]string{}, fmt.Errorf("error creating request: %v", err)
 	}
 
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", azureVaultToken))
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return "", fmt.Errorf("error making request: %v", err)
+		return map[string]string{}, fmt.Errorf("error making request: %v", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("error response status code: %d", resp.StatusCode)
+		return map[string]string{}, fmt.Errorf("error response status code: %d", resp.StatusCode)
 	}
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return "", fmt.Errorf("error reading response body: %v", err)
+		return map[string]string{}, fmt.Errorf("error reading response body: %v", err)
 	}
 
-	var responseJSON map[string]interface{}
+	var responseJSON map[string]string
 	err = json.Unmarshal(body, &responseJSON)
 	if err != nil {
-		return "", fmt.Errorf("error unmarshalling response JSON: %v", err)
+		return map[string]string{}, fmt.Errorf("error unmarshalling response JSON: %v", err)
 	}
 
-	secretValue, ok := responseJSON["value"].(string)
-	if !ok {
-		return "", fmt.Errorf("value not found in response JSON")
-	}
+	// secretValue, ok := responseJSON["value"].(string)
+	// if !ok {
+	// 	return map[string]string{}, fmt.Errorf("value not found in response JSON")
+	// }
 
-	return secretValue, nil
+	return responseJSON, nil
 }
