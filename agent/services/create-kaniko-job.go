@@ -312,8 +312,8 @@ func getKanikoJobObject(
 func createKanikoConfigResources(clientset *kubernetes.Clientset, params constants.ParamsConfig) (CreateJobConfig, error) {
 	cloudProviderSecretName, err := createArtifactsSecret(clientset, params)
 	if err != nil {
-		log.Fatalf("Error Getting Secret Name: %v", err)
-		return CreateJobConfig{}, err
+		log.Fatalf("Error Creating Artifacts Secret: %v", err)
+		// return CreateJobConfig{}, err
 	}
 
 	dockerFileConfigName, err := getDockerFileConfig(clientset, params)
