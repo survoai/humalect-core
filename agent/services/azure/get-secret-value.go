@@ -40,17 +40,20 @@ func GetSecretValue(azureVaultToken string, vaultName string, secretName string)
 	if err != nil {
 		return map[string]string{}, fmt.Errorf("error reading response body: %v", err)
 	}
-
-	var responseJSON map[string]string
+	var responseJSON map[string]interface{}
 	err = json.Unmarshal(body, &responseJSON)
 	if err != nil {
 		return map[string]string{}, fmt.Errorf("error unmarshalling response JSON: %v", err)
 	}
-
+	var secretData map[string]string
+	err = json.Unmarshal([]byte(responseJSON["value"].(string)), &secretData)
+	if err != nil {
+		return map[string]string{}, fmt.Errorf("error unmarshalling response JSON: %v", err)
+	}
 	// secretValue, ok := responseJSON["value"].(string)
 	// if !ok {
 	// 	return map[string]string{}, fmt.Errorf("value not found in response JSON")
 	// }
 
-	return responseJSON, nil
+	return secretData, nil
 }
