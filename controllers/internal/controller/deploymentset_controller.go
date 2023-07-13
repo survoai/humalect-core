@@ -119,6 +119,13 @@ func (r *DeploymentSetReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		sendDeploymentJobCreatedWebhook(*deploymentSet, false)
 		panic(err)
 	}
+
+	buildSecretsConfig, err := json.Marshal(deploymentSet.Spec.BuildSecretsConfig)
+	if err != nil {
+		deploymentSet.Spec.WebhookData = helpers.UpdateStatusData(deploymentSet.Spec.WebhookData, constants.DeploymentJobCreated, false)
+		sendDeploymentJobCreatedWebhook(*deploymentSet, false)
+		panic(err)
+	}
 	serviceYamlManifest, err := json.Marshal(deploymentSet.Spec.ServiceYamlManifest)
 	if err != nil {
 		deploymentSet.Spec.WebhookData = helpers.UpdateStatusData(deploymentSet.Spec.WebhookData, constants.DeploymentJobCreated, false)
@@ -219,7 +226,7 @@ func (r *DeploymentSetReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 								fmt.Sprintf("--managedBy=%s", deploymentSet.Spec.ManagedBy),
 								fmt.Sprintf("--cloudRegion=%s", deploymentSet.Spec.CloudRegion),
 								fmt.Sprintf("--k8sResourcesIdentifier=%s", deploymentSet.Spec.K8sResourcesIdentifier),
-								fmt.Sprintf("--buildSecretsConfig=%s", deploymentSet.Spec.BuildSecretsConfig),
+								fmt.Sprintf("--buildSecretsConfig=%s", buildSecretsConfig),
 								fmt.Sprintf("--applicationSecretsConfig=%s", applicationSecretsConfig),
 								fmt.Sprintf("--namespace=%s", deploymentSet.Spec.Namespace),
 								fmt.Sprintf("--deploymentId=%s", deploymentSet.Spec.DeploymentId),
