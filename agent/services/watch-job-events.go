@@ -19,7 +19,7 @@ func WatchJobEvents(namespace, jobName string) bool {
 	for {
 		watcher, err := clientset.BatchV1().Jobs(namespace).Watch(context.TODO(), metav1.SingleObject(metav1.ObjectMeta{Name: jobName}))
 		if err != nil {
-			panic(err.Error())
+			return false
 		}
 
 		ch := watcher.ResultChan()

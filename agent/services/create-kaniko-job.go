@@ -42,27 +42,27 @@ func CreateKanikoJob(params constants.ParamsConfig) (CreateJobConfig, error) {
 	if err != nil {
 		log.Fatalf("Error creating clientset: %v", err)
 		SendWebhook(params.WebhookEndpoint, params.WebhookData, false, constants.CreatedKanikoJob)
-		panic(err)
+		return CreateJobConfig{}, errors.New("Error Starting Build")
 	}
 	createJobConfig, err := createKanikoConfigResources(clientset, params)
 	if err != nil {
 		log.Fatalf("Error creating resources for Job: %v", err)
 		SendWebhook(params.WebhookEndpoint, params.WebhookData, false, constants.CreatedKanikoJob)
-		panic(err)
+		return CreateJobConfig{}, errors.New("Error Starting Build")
 	}
 
 	job, err := getKanikoJobObject(createJobConfig, params)
 	if err != nil {
 		log.Fatalf("Error generating Job Yaml: %v", err)
 		SendWebhook(params.WebhookEndpoint, params.WebhookData, false, constants.CreatedKanikoJob)
-		panic(err)
+		return CreateJobConfig{}, errors.New("Error Starting Build")
 	}
 
 	jobClient := clientset.BatchV1().Jobs("humalect")
 	createdJob, err := jobClient.Create(context.Background(), &job, metav1.CreateOptions{})
 	if err != nil {
 		SendWebhook(params.WebhookEndpoint, params.WebhookData, false, constants.CreatedKanikoJob)
-		panic(err)
+		return CreateJobConfig{}, errors.New("Error Starting Build")
 	}
 	SendWebhook(params.WebhookEndpoint, params.WebhookData, true, constants.CreatedKanikoJob)
 	createJobConfig.KanikoJobName = createdJob.GetName()

@@ -39,7 +39,7 @@ func CreateK8sApplication(params *constants.ParamsConfig, kanikoJobResources Cre
 	// create the dynamic client
 	dynamicClient, err := dynamic.NewForConfig(config)
 	if err != nil {
-		panic(err.Error())
+		return "", err
 	}
 
 	// specify the custom resource definition

@@ -16,7 +16,8 @@ func CleanupKanikoJobResources(jobConfig CreateJobConfig) error {
 	if err != nil {
 		log.Fatalf("Error creating clientset: %v", err)
 		// SendWebhook(params.WebhookEndpoint, params.WebhookData, false, constants.CreatedKanikoJob)
-		panic(err)
+		// panic(err)
+		return err
 	}
 	// if len(jobConfig.CloudProviderSecretName) != 0 {
 	// 	err := deleteSecret(clientset, jobConfig.CloudProviderSecretName, "humalect")

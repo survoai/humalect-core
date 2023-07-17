@@ -10,7 +10,6 @@ func UpdateStatusData(webhookDataString string, step string, success bool) strin
 	err := json.Unmarshal([]byte(webhookDataString), &WebhookData)
 	if err != nil {
 		fmt.Println("Some error occured while parsing webhook data:= ", err)
-		panic(err)
 	}
 	if _, ok := WebhookData["statusData"]; ok {
 		WebhookData["statusData"].(map[string]interface{})[step] = success
