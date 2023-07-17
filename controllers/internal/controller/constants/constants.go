@@ -12,4 +12,9 @@ const (
 	DeploymentCompleted               = "DEPLOYMENT_COMPLETED"
 )
 
+type SecretConfig struct {
+	Name        string `json:"name"`
+	ContentType string `json:"contentType,omitempty"`
+}
+
 // AzureResourcesName := os.Getenv("DATABASE_URL")

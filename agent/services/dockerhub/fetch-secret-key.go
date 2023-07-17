@@ -22,7 +22,8 @@ func FetchDockerHubSecretKey(params constants.ParamsConfig) (string, error) {
 		} else {
 			region = awsSecretCredentials.Region
 		}
-		return aws.GetSecretValue(dockerHubCreds.SecretName, awsSecretCredentials.AccessKey, awsSecretCredentials.SecretKey, region, params.CloudProvider)
+		secretData, err := aws.GetSecretValue(dockerHubCreds.SecretName, awsSecretCredentials.AccessKey, awsSecretCredentials.SecretKey, region, params.CloudProvider)
+		return secretData[constants.RegistryIdDockerhub], err
 	} else if params.SecretsProvider == constants.CloudIdAzure || (params.SecretsProvider == "" && params.CloudProvider == constants.CloudIdAzure) {
 		var azureVaultCredentials constants.AzureVaultCredentials
 		_ = json.Unmarshal([]byte(params.AzureVaultCredentials), &azureVaultCredentials)
@@ -31,7 +32,7 @@ func FetchDockerHubSecretKey(params constants.ParamsConfig) (string, error) {
 			log.Fatalf("Error getting dockerhub secret: %v", err)
 			return "", err
 		}
-		return secretData, nil
+		return secretData[constants.RegistryIdDockerhub], nil
 	} else {
 		return "", errors.New("No credentials provided")
 	}

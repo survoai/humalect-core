@@ -12,10 +12,10 @@ import (
 	"github.com/aws/aws-sdk-go/service/secretsmanager"
 )
 
-func GetSecretValue(secretName, accessKey, secretKey, region string, cloudProvider string) (string, error) {
+func GetSecretValue(secretName, accessKey, secretKey, region string, cloudProvider string) (map[string]string, error) {
 	// Create a session object with the access key and secret key
 	if (secretName == "" || accessKey == "" || secretKey == "" || region == "") && cloudProvider != constants.CloudIdAWS {
-		return "", errors.New("Secrets Name or Access Key or Secret Key or Region is empty in DockerHub")
+		return map[string]string{}, errors.New("Secrets Name or Access Key or Secret Key or Region is empty in DockerHub")
 	}
 
 	var sess *session.Session
@@ -28,7 +28,7 @@ func GetSecretValue(secretName, accessKey, secretKey, region string, cloudProvid
 		})
 		if err != nil {
 			fmt.Println("Error creating session:", err)
-			return "", err
+			return map[string]string{}, err
 		}
 	} else {
 		sess, err = session.NewSession(&aws.Config{
@@ -36,7 +36,7 @@ func GetSecretValue(secretName, accessKey, secretKey, region string, cloudProvid
 		})
 		if err != nil {
 			fmt.Println("Error creating session:", err)
-			return "", err
+			return map[string]string{}, err
 		}
 	}
 
@@ -50,7 +50,7 @@ func GetSecretValue(secretName, accessKey, secretKey, region string, cloudProvid
 	result, err := svc.GetSecretValue(input)
 	if err != nil {
 		fmt.Println("Error getting secret value:", err)
-		return "", err
+		return map[string]string{}, err
 	}
 
 	// Extract the secret value and return it
@@ -60,9 +60,9 @@ func GetSecretValue(secretName, accessKey, secretKey, region string, cloudProvid
 	err = json.Unmarshal([]byte(secretValue), &secretData)
 	if err != nil {
 		fmt.Println("Error unmarshalling JSON:", err)
-		return "", err
+		return map[string]string{}, err
 	}
 
 	// Return the "dockerhub" key's value
-	return secretData[constants.RegistryIdDockerhub], nil
+	return secretData, nil
 }

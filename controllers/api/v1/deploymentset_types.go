@@ -25,6 +25,11 @@ import (
 
 // DeploymentSetSpec defines the desired state of DeploymentSet
 
+type SecretConfig struct {
+	Name        string `json:"name"`
+	ContentType string `json:"contentType,omitempty"`
+}
+
 type EcrCredentials struct {
 	AccessKey   string `json:"accessKey,omitempty"`
 	SecretKey   string `json:"secretKey,omitempty"`
@@ -76,7 +81,8 @@ type DeploymentSetSpec struct {
 	ServiceYamlManifest       ServiceYamlManifestType    `json:"serviceYamlManifest"`
 	IngressYamlManifest       IngressYamlManifestType    `json:"ingressYamlManifest"`
 	DockerManifest            []string                   `json:"dockerManifest,omitempty"`
-	SecretManagerName         string                     `json:"secretManagerName,omitempty"`
+	BuildSecretsConfig        []SecretConfig             `json:"buildSecretsConfig,omitempty"`
+	ApplicationSecretsConfig  []SecretConfig             `json:"applicationSecretsConfig,omitempty"`
 	ManagedBy                 string                     `json:"managedBy,omitempty"`
 	UseDockerFromCodeFlag     bool                       `json:"useDockerFromCodeFlag,omitempty"`
 	JobName                   string                     `json:"jobName"`
