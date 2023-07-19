@@ -2,11 +2,13 @@ package services
 
 import (
 	"context"
+	"encoding/json"
 	"flag"
 	"fmt"
 
 	"github.com/Humalect/humalect-core/agent/constants"
 
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -14,23 +16,30 @@ import (
 	"k8s.io/client-go/dynamic"
 )
 
-func CreateK8sApplication(k8sAppName string, managedBy string, cloudRegion string, cloudProvider string,
-	k8sResourcesIdentifier string, deploymentYamlManifest constants.DeploymentYamlManifestType, serviceYamlManifest constants.ServiceYamlManifestType, ingressYamlManifest constants.IngressYamlManifestType, secretManagerName string, azureVaultToken string, azureVaultName string, namespace string, webhookEndpoint string, webhookData string, deploymentId string,
-) (string, error) {
-	// var kubeconfig *string
-	// if home := os.Getenv("HOME"); home != "" {
-	// 	kubeconfig = flag.String("kubeconfig", filepath.Join(home, ".kube", "config"), "(optional) absolute path to the kubeconfig file")
-	// } else {
-	// 	kubeconfig = flag.String("kubeconfig", "", "absolute path to the kubeconfig file")
-	// }
+func CreateK8sApplication(params *constants.ParamsConfig, kanikoJobResources CreateJobConfig, webhookData string) (string, error) {
+	var awsSecretCredentials constants.AwsSecretCredentials
+	var azureVaultCredentials constants.AzureVaultCredentials
+	var deploymentYamlManifest constants.DeploymentYamlManifestType
+	var serviceYamlManifest constants.ServiceYamlManifestType
+	var ingressYamlManifest constants.IngressYamlManifestType
+	var buildSecretsConfig []constants.SecretConfig
+	var applicationSecretsConfig []constants.SecretConfig
+	json.Unmarshal([]byte(params.AwsSecretCredentials), &awsSecretCredentials)
+	json.Unmarshal([]byte(params.AzureVaultCredentials), &azureVaultCredentials)
+	json.Unmarshal([]byte(params.DeploymentYamlManifest), &deploymentYamlManifest)
+	json.Unmarshal([]byte(params.ServiceYamlManifest), &serviceYamlManifest)
+	json.Unmarshal([]byte(params.IngressYamlManifest), &ingressYamlManifest)
+	json.Unmarshal([]byte(params.BuildSecretsConfig), &buildSecretsConfig)
+	json.Unmarshal([]byte(params.ApplicationSecretsConfig), &applicationSecretsConfig)
+
+	deploymentYamlManifest.Spec.Template.Spec.ImagePullSecrets = []corev1.LocalObjectReference{{Name: kanikoJobResources.CloudProviderSecretName}}
 
 	flag.Parse()
-
 	config := GetK8sConfig()
 	// create the dynamic client
 	dynamicClient, err := dynamic.NewForConfig(config)
 	if err != nil {
-		panic(err.Error())
+		return "", err
 	}
 
 	// specify the custom resource definition
@@ -46,42 +55,45 @@ func CreateK8sApplication(k8sAppName string, managedBy string, cloudRegion strin
 			"kind":       "Application",
 			"metadata": map[string]interface{}{
 				"labels": map[string]interface{}{
-					"app.kubernetes.io/name":       k8sAppName,
-					"app.kubernetes.io/instance":   k8sAppName,
+					"app.kubernetes.io/name":       params.K8sAppName,
+					"app.kubernetes.io/instance":   params.K8sAppName,
 					"app.kubernetes.io/part-of":    "humalect-core",
-					"app.kubernetes.io/managed-by": managedBy,
+					"app.kubernetes.io/managed-by": params.ManagedBy,
 					"app.kubernetes.io/created-by": "humalect-core",
-					"deploymentId":                 deploymentId,
+					"deploymentId":                 params.DeploymentId,
+					"managedBy":                    params.ManagedBy,
 				},
-				"name": k8sAppName,
+				"name": params.K8sAppName,
 				"finalizers": []interface{}{
 					"finalizers.humalect.com/application",
 				},
 			},
 			"spec": map[string]interface{}{
-				"cloudRegion":            cloudRegion,
-				"cloudProvider":          cloudProvider,
-				"k8sResourcesIdentifier": k8sResourcesIdentifier,
-				"deploymentYamlManifest": deploymentYamlManifest,
-				"serviceYamlManifest":    serviceYamlManifest,
-				"ingressYamlManifest":    ingressYamlManifest,
-				"secretManagerName":      secretManagerName,
-				"managedBy":              managedBy,
-				"azureVaultToken":        azureVaultToken,
-				"azureVaultName":         azureVaultName,
-				"namespace":              namespace,
-				"webhookEndpoint":        webhookEndpoint,
-				"webhookData":            webhookData,
+				"secretsProvider":          params.SecretsProvider,
+				"awsSecretCredentials":     awsSecretCredentials,
+				"azureVaultCredentials":    azureVaultCredentials,
+				"cloudRegion":              params.CloudRegion,
+				"cloudProvider":            params.CloudProvider,
+				"k8sResourcesIdentifier":   params.K8sResourcesIdentifier,
+				"deploymentYamlManifest":   deploymentYamlManifest,
+				"serviceYamlManifest":      serviceYamlManifest,
+				"ingressYamlManifest":      ingressYamlManifest,
+				"buildSecretsConfig":       buildSecretsConfig,
+				"applicationSecretsConfig": applicationSecretsConfig,
+				"managedBy":                params.ManagedBy,
+				"namespace":                params.Namespace,
+				"webhookEndpoint":          params.WebhookEndpoint,
+				"webhookData":              webhookData,
 			},
 		},
 	}
 
 	// create the custom resource in the specified namespace
 	ctx := context.TODO()
-	existingResource, err := dynamicClient.Resource(applicationGVR).Namespace(namespace).Get(ctx, applicationInstance.GetName(), metav1.GetOptions{})
+	existingResource, err := dynamicClient.Resource(applicationGVR).Namespace(params.Namespace).Get(ctx, applicationInstance.GetName(), metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
-			applicationResource, err := dynamicClient.Resource(applicationGVR).Namespace(namespace).Create(ctx, applicationInstance, metav1.CreateOptions{})
+			applicationResource, err := dynamicClient.Resource(applicationGVR).Namespace(params.Namespace).Create(ctx, applicationInstance, metav1.CreateOptions{})
 			if err != nil {
 				fmt.Println(err)
 				return "", err
@@ -96,12 +108,12 @@ func CreateK8sApplication(k8sAppName string, managedBy string, cloudRegion strin
 	for key, value := range applicationInstance.Object {
 		existingResource.Object[key] = value
 	}
-	updatedResource, err := dynamicClient.Resource(applicationGVR).Namespace(namespace).Update(ctx, existingResource, metav1.UpdateOptions{})
+	updatedResource, err := dynamicClient.Resource(applicationGVR).Namespace(params.Namespace).Update(ctx, existingResource, metav1.UpdateOptions{})
 	if err != nil {
 		fmt.Println(err)
 		return "", err
 		// panic(err.Error())
 	}
-	fmt.Printf("Created custom resource %s in namespace %s\n", updatedResource.GetName(), namespace)
+	fmt.Printf("Created custom resource %s in namespace %s\n", updatedResource.GetName(), params.Namespace)
 	return updatedResource.GetName(), nil
 }

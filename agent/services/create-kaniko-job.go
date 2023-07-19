@@ -5,13 +5,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"math"
-	"net/http"
 	"strings"
 
 	"github.com/Humalect/humalect-core/agent/constants"
+	"github.com/Humalect/humalect-core/agent/services/aws"
+	"github.com/Humalect/humalect-core/agent/services/azure"
+	"github.com/Humalect/humalect-core/agent/services/dockerhub"
 
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -20,10 +21,6 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-type AzureCreds struct {
-	Username string `json:"username"`
-	Password string `json:"password"`
-}
 type CreateJobConfig struct {
 	CloudProviderSecretName string
 	DockerFileConfigName    string
@@ -45,129 +42,42 @@ func CreateKanikoJob(params constants.ParamsConfig) (CreateJobConfig, error) {
 	if err != nil {
 		log.Fatalf("Error creating clientset: %v", err)
 		SendWebhook(params.WebhookEndpoint, params.WebhookData, false, constants.CreatedKanikoJob)
-		panic(err)
+		return CreateJobConfig{}, errors.New("Error Starting Build")
 	}
 	createJobConfig, err := createKanikoConfigResources(clientset, params)
 	if err != nil {
 		log.Fatalf("Error creating resources for Job: %v", err)
 		SendWebhook(params.WebhookEndpoint, params.WebhookData, false, constants.CreatedKanikoJob)
-		panic(err)
+		return CreateJobConfig{}, errors.New("Error Starting Build")
 	}
 
 	job, err := getKanikoJobObject(createJobConfig, params)
 	if err != nil {
 		log.Fatalf("Error generating Job Yaml: %v", err)
 		SendWebhook(params.WebhookEndpoint, params.WebhookData, false, constants.CreatedKanikoJob)
-		panic(err)
+		return CreateJobConfig{}, errors.New("Error Starting Build")
 	}
 
 	jobClient := clientset.BatchV1().Jobs("humalect")
 	createdJob, err := jobClient.Create(context.Background(), &job, metav1.CreateOptions{})
 	if err != nil {
 		SendWebhook(params.WebhookEndpoint, params.WebhookData, false, constants.CreatedKanikoJob)
-		panic(err)
+		return CreateJobConfig{}, errors.New("Error Starting Build")
 	}
 	SendWebhook(params.WebhookEndpoint, params.WebhookData, true, constants.CreatedKanikoJob)
 	createJobConfig.KanikoJobName = createdJob.GetName()
 	return createJobConfig, nil
 }
 
-func createCloudProviderCredSecrets(clientset *kubernetes.Clientset, params constants.ParamsConfig) (string, error) {
-	if params.CloudProvider == constants.CloudIdAzure {
-		azureCreds, err := getOrgAzureCredsForAcr(params.AzureManagementScopeToken, params.AzureAcrRegistryName,
-			params.AzureSubscriptionId,
-			params.AzureResourceGroupName)
-		if err != nil {
-			log.Fatalf("Error getting Azure ACR creds: %v", err)
-			return "", err
-		}
-
-		dockerRegistrySecret := &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: fmt.Sprintf("%s-ksec-%s-%s",
-					params.ManagedBy[:int(math.Min(float64(len(params.ManagedBy)), float64(10)))],
-					params.CommitId[:int(math.Min(float64(len(params.CommitId)), float64(5)))],
-					params.DeploymentId[:int(math.Min(float64(len(params.DeploymentId)), float64(7)))]),
-				Namespace: "humalect",
-				Labels: map[string]string{
-					"app": fmt.Sprintf("%s-build-push-dockerimage-%s-%s",
-						params.ManagedBy[:int(math.Min(float64(len(params.ManagedBy)), float64(10)))],
-						params.CommitId[:int(math.Min(float64(len(params.CommitId)), float64(5)))],
-						params.DeploymentId[:int(math.Min(float64(len(params.DeploymentId)), float64(7)))]),
-					"DeploymentId": params.DeploymentId,
-					"ManagedBy":    params.ManagedBy,
-					"CommitId":     params.CommitId,
-				},
-			},
-			Type: corev1.SecretTypeDockerConfigJson,
-			StringData: map[string]string{
-				".dockerconfigjson": fmt.Sprintf(`{  
-					"auths": {  
-						"%s.azurecr.io": {  
-							"username": "%s",  
-							"password": "%s"  
-						}  
-					}  
-				}`, params.AzureAcrRegistryName, azureCreds.Username, azureCreds.Password),
-			},
-		}
-
-		// Create the Docker registry secret in the default Namespace
-		createdSecret, err := clientset.CoreV1().Secrets("humalect").Create(context.Background(), dockerRegistrySecret, metav1.CreateOptions{})
-		if err != nil {
-			log.Fatalf("Error creating docker registry secret secret: %v", err)
-		}
-
-		log.Printf("Docker Registry Secret %s created in Namespace %s\n", createdSecret.Name, createdSecret.Namespace)
-
-		return createdSecret.Name, nil
-
-	} else {
-		return "", nil
+func createArtifactsSecret(clientset *kubernetes.Clientset, params constants.ParamsConfig) (string, error) {
+	if params.ArtifactsRegistryProvider == constants.RegistryIdAWS {
+		return aws.CreateEcrSecret(params, clientset)
+	} else if params.ArtifactsRegistryProvider == constants.RegistryIdDockerhub {
+		return dockerhub.CreateSecret(params, clientset)
+	} else if params.ArtifactsRegistryProvider == constants.RegistryIdAzure || (params.ArtifactsRegistryProvider == "" && params.CloudProvider == constants.CloudIdAzure) {
+		return azure.CreateAcrSecret(params, clientset)
 	}
-}
-
-func getOrgAzureCredsForAcr(AzureManagementScopeToken string, AzureAcrRegistryName string, AzureSubscriptionId string, AzureResourceGroupName string) (AzureCreds, error) {
-	url := fmt.Sprintf("https://management.azure.com/subscriptions/%s/resourceGroups/%s/providers/Microsoft.ContainerRegistry/registries/%s/listCredentials?api-version=2019-05-01", AzureSubscriptionId, AzureResourceGroupName, AzureAcrRegistryName)
-
-	client := &http.Client{}
-	req, err := http.NewRequest("POST", url, strings.NewReader("{}"))
-	if err != nil {
-		return AzureCreds{}, err
-	}
-
-	req.Header.Set("Authorization", "Bearer "+AzureManagementScopeToken)
-	resp, err := client.Do(req)
-	if err != nil {
-		return AzureCreds{}, err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		fmt.Println("Status Code: ", resp.StatusCode)
-		fmt.Println("resp", resp)
-		return AzureCreds{}, errors.New("non-200 status code received when tried to get Creds for Azure ACR")
-	}
-
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return AzureCreds{}, err
-	}
-
-	var result map[string]interface{}
-	json.Unmarshal(body, &result)
-
-	username := result["username"].(string)
-	password := result["passwords"].([]interface{})[0].(map[string]interface{})["value"].(string)
-
-	if username == "" {
-		return AzureCreds{}, errors.New("unable to fetch credentials for ACR")
-	}
-
-	return AzureCreds{
-		Username: username,
-		Password: password,
-	}, nil
+	return "", nil
 }
 
 func getCodeSourceSpecificGitUrl(params constants.ParamsConfig) string {
@@ -208,9 +118,9 @@ func getDockerFileConfig(clientset *kubernetes.Clientset, params constants.Param
 						params.ManagedBy[:int(math.Min(float64(len(params.ManagedBy)), float64(10)))],
 						params.CommitId[:int(math.Min(float64(len(params.CommitId)), float64(5)))],
 						params.DeploymentId[:int(math.Min(float64(len(params.DeploymentId)), float64(7)))]),
-					"DeploymentId": params.DeploymentId,
-					"ManagedBy":    params.ManagedBy,
-					"CommitId":     params.CommitId,
+					"deploymentId": params.DeploymentId,
+					"managedBy":    params.ManagedBy,
+					"commitId":     params.CommitId,
 				},
 			},
 			Data: map[string]string{
@@ -233,12 +143,24 @@ func getKanikoJobObject(
 	params constants.ParamsConfig,
 ) (batchv1.Job, error) {
 	var artifactsRepoUrl string
-	if params.CloudProvider == constants.CloudIdAzure {
-		artifactsRepoUrl = fmt.Sprintf("%s.azurecr.io/%s:%s", params.AzureAcrRegistryName, params.
+	if params.ArtifactsRegistryProvider == constants.RegistryIdAzure || (params.ArtifactsRegistryProvider == "" && params.CloudProvider == constants.CloudIdAzure) {
+		var acrCredentials constants.AcrCredentials
+		_ = json.Unmarshal([]byte(params.AcrCredentials), &acrCredentials)
+		artifactsRepoUrl = fmt.Sprintf("%s.azurecr.io/%s:%s", acrCredentials.RegistryName, params.
 			ArtifactsRepositoryName, params.CommitId)
-	} else if params.CloudProvider == constants.CloudIdAWS {
-		artifactsRepoUrl = fmt.Sprintf("%s/%s:%s", params.AwsEcrRegistryUrl, params.
+	} else if params.ArtifactsRegistryProvider == constants.RegistryIdAWS || (params.ArtifactsRegistryProvider == "" && params.CloudProvider == constants.CloudIdAWS) {
+		var ecrCredentials constants.EcrCredentials
+		_ = json.Unmarshal([]byte(params.EcrCredentials), &ecrCredentials)
+		artifactsRepoUrl = fmt.Sprintf("%s/%s:%s", ecrCredentials.RegistryUrl, params.
 			ArtifactsRepositoryName, params.CommitId)
+	} else if params.ArtifactsRegistryProvider == constants.RegistryIdDockerhub {
+		var dockerHubCreds constants.DockerHubCredentials
+		_ = json.Unmarshal([]byte(params.DockerHubCredentials), &dockerHubCreds)
+		artifactsRepoUrl = fmt.Sprintf("%s/%s:%s", dockerHubCreds.Username, params.ArtifactsRepositoryName, params.CommitId)
+
+	} else {
+		fmt.Println("Invalid Artifacts Registry Provider received.")
+		return batchv1.Job{}, errors.New("Invalid Artifacts Registry Provider received.")
 	}
 	gitUrl := getCodeSourceSpecificGitUrl(params)
 	prepareConfigVolumeMounts := []corev1.VolumeMount{
@@ -311,7 +233,10 @@ func getKanikoJobObject(
 			VolumeSource: corev1.VolumeSource{EmptyDir: &corev1.EmptyDirVolumeSource{}},
 		})
 	}
-
+	buildArgs, err := getKanikoBuildArgs(params)
+	if err != nil {
+		return batchv1.Job{}, err
+	}
 	podSpec := corev1.PodSpec{
 		InitContainers: []corev1.Container{
 			{
@@ -330,11 +255,12 @@ func getKanikoJobObject(
 				Name:            "kaniko",
 				Image:           "gcr.io/kaniko-project/executor:latest",
 				ImagePullPolicy: corev1.PullAlways,
-				Args: []string{
-					fmt.Sprintf("--context=dir:///%s", kanikoWorkspaceName),
-					fmt.Sprintf("--dockerfile=/%s/Dockerfile", kanikoWorkspaceName),
-					fmt.Sprintf("--destination=%s", artifactsRepoUrl),
-				},
+				Args: append(
+					[]string{
+						fmt.Sprintf("--context=dir:///%s", kanikoWorkspaceName),
+						fmt.Sprintf("--dockerfile=/%s/Dockerfile", kanikoWorkspaceName),
+						fmt.Sprintf("--destination=%s", artifactsRepoUrl),
+					}, buildArgs...),
 				Env:          kanikoEnvVars,
 				VolumeMounts: kanikoVolumeMounts,
 			},
@@ -348,9 +274,9 @@ func getKanikoJobObject(
 		Template: corev1.PodTemplateSpec{
 			ObjectMeta: metav1.ObjectMeta{
 				Labels: map[string]string{
-					"DeploymentId": params.DeploymentId,
-					"ManagedBy":    params.ManagedBy,
-					"CommitId":     params.CommitId,
+					"deploymentId": params.DeploymentId,
+					"managedBy":    params.ManagedBy,
+					"commitId":     params.CommitId,
 				},
 			},
 			Spec: podSpec,
@@ -372,9 +298,9 @@ func getKanikoJobObject(
 					params.ManagedBy[:int(math.Min(float64(len(params.ManagedBy)), float64(10)))],
 					params.CommitId[:int(math.Min(float64(len(params.CommitId)), float64(5)))],
 					params.DeploymentId[:int(math.Min(float64(len(params.DeploymentId)), float64(7)))]),
-				"DeploymentId": params.DeploymentId,
-				"ManagedBy":    params.ManagedBy,
-				"CommitId":     params.CommitId,
+				"deploymentId": params.DeploymentId,
+				"managedBy":    params.ManagedBy,
+				"commitId":     params.CommitId,
 			},
 			Namespace: "humalect",
 		},
@@ -384,10 +310,10 @@ func getKanikoJobObject(
 }
 
 func createKanikoConfigResources(clientset *kubernetes.Clientset, params constants.ParamsConfig) (CreateJobConfig, error) {
-	cloudProviderSecretName, err := createCloudProviderCredSecrets(clientset, params)
+	cloudProviderSecretName, err := createArtifactsSecret(clientset, params)
 	if err != nil {
-		log.Fatalf("Error Getting Secret Name: %v", err)
-		return CreateJobConfig{}, err
+		log.Fatalf("Error Creating Artifacts Secret: %v", err)
+		// return CreateJobConfig{}, err
 	}
 
 	dockerFileConfigName, err := getDockerFileConfig(clientset, params)
@@ -396,4 +322,18 @@ func createKanikoConfigResources(clientset *kubernetes.Clientset, params constan
 		return CreateJobConfig{}, err
 	}
 	return CreateJobConfig{CloudProviderSecretName: cloudProviderSecretName, DockerFileConfigName: dockerFileConfigName}, nil
+}
+
+func getKanikoBuildArgs(params constants.ParamsConfig) ([]string, error) {
+	secretData, err := FetchBuildSecrets(params)
+	if err != nil {
+		return []string{}, err
+	}
+	secretArgs := []string{}
+	for key, value := range secretData {
+		if value != "" {
+			secretArgs = append(secretArgs, fmt.Sprintf("--build-arg=%s=%s", key, value))
+		}
+	}
+	return secretArgs, err
 }

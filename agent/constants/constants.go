@@ -27,9 +27,46 @@ type IngressYamlManifestType struct {
 	Metadata metav1.ObjectMeta        `json:"metadata"`
 	Spec     networkingv1.IngressSpec `json:"spec"`
 }
+
+type EcrCredentials struct {
+	AccessKey   string `json:"accessKey,omitempty"`
+	SecretKey   string `json:"secretKey,omitempty"`
+	RegistryUrl string `json:"registryUrl,omitempty"`
+	Region      string `json:"region,omitempty"`
+}
+
+type DockerHubCredentials struct {
+	Username   string `json:"username,omitempty"`
+	SecretName string `json:"secretName,omitempty"`
+}
+
+type AcrCredentials struct {
+	ManagementScopeToken string `json:"managementScopeToken,omitempty"`
+	RegistryName         string `json:"registryName,omitempty"`
+	SubscriptionId       string `json:"subscriptionId,omitempty"`
+	ResourceGroupName    string `json:"resourceGroupName,omitempty"`
+}
+
+type AwsSecretCredentials struct {
+	AccessKey string `json:"accessKey,omitempty"`
+	SecretKey string `json:"secretKey,omitempty"`
+	Region    string `json:"region,omitempty"`
+}
+
+type AzureVaultCredentials struct {
+	Token string `json:"token,omitempty"`
+	Name  string `json:"name,omitempty"`
+}
+
 type ParamsConfig struct {
+	SecretsProvider           string
+	EcrCredentials            string
+	DockerHubCredentials      string
+	AcrCredentials            string
+	AwsSecretCredentials      string
+	AzureVaultCredentials     string
+	ArtifactsRegistryProvider string
 	CloudProvider             string
-	AzureManagementScopeToken string
 	SourceCodeRepositoryName  string
 	SourceCodeProvider        string
 	SourceCodeToken           string
@@ -37,12 +74,7 @@ type ParamsConfig struct {
 	CommitId                  string
 	DockerManifest            string
 	ArtifactsRepositoryName   string
-	AwsEcrRegistryUrl         string
 	K8sAppName                string
-	AzureAcrRegistryName      string
-	AwsEcrUserName            string
-	AzureSubscriptionId       string
-	AzureResourceGroupName    string
 	UseDockerFromCodeFlag     bool
 	DeploymentYamlManifest    string
 	IngressYamlManifest       string
@@ -50,16 +82,23 @@ type ParamsConfig struct {
 	ManagedBy                 string `default:"Humalect"`
 	CloudRegion               string
 	K8sResourcesIdentifier    string
-	AzureVaultToken           string
-	SecretManagerName         string
+	BuildSecretsConfig        string
+	ApplicationSecretsConfig  string
 	Namespace                 string `default:"default"`
-	AzureVaultName            string
 	DeploymentId              string
 	WebhookEndpoint           string
 	WebhookData               string
 }
+type SecretConfig struct {
+	Name        string `json:"name"`
+	ContentType string `json:"contentType,omitempty"`
+}
 
 const (
+	RegistryIdAWS                     = "ecr"
+	RegistryIdAzure                   = "acr"
+	RegistryIdDockerhub               = "dockerhub"
+	CloudIdCivo                       = "civo"
 	CloudIdAzure                      = "azure"
 	CloudIdAWS                        = "aws"
 	KanikoWorkspaceName               = "workspace"
@@ -72,4 +111,6 @@ const (
 	DeploymentFailed                  = "DEPLOYMENT_FAILED"
 	KanikoJobExecuted                 = "KANIKO_JOB_EXECUTED"
 	CreatedApplicationCrd             = "CREATED_APPLICATION_CRD"
+	SecretContentTypeFileMount        = "FILE_MOUNT"
+	SecretContentTypeKeyValue         = "KEY_VALUE"
 )

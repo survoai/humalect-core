@@ -24,7 +24,50 @@ import (
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
 // DeploymentSetSpec defines the desired state of DeploymentSet
+
+type SecretConfig struct {
+	Name        string `json:"name"`
+	ContentType string `json:"contentType,omitempty"`
+}
+
+type EcrCredentials struct {
+	AccessKey   string `json:"accessKey,omitempty"`
+	SecretKey   string `json:"secretKey,omitempty"`
+	RegistryUrl string `json:"registryUrl,omitempty"`
+	Region      string `json:"region,omitempty"`
+}
+
+type DockerHubCredentials struct {
+	Username   string `json:"username,omitempty"`
+	SecretName string `json:"secretName,omitempty"`
+}
+
+type AcrCredentials struct {
+	ManagementScopeToken string `json:"managementScopeToken,omitempty"`
+	RegistryName         string `json:"registryName,omitempty"`
+	SubscriptionId       string `json:"subscriptionId,omitempty"`
+	ResourceGroupName    string `json:"resourceGroupName,omitempty"`
+}
+
+type AwsSecretCredentials struct {
+	AccessKey string `json:"accessKey,omitempty"`
+	SecretKey string `json:"secretKey,omitempty"`
+	Region    string `json:"region,omitempty"`
+}
+
+type AzureVaultCredentials struct {
+	Token string `json:"token,omitempty"`
+	Name  string `json:"name,omitempty"`
+}
+
 type DeploymentSetSpec struct {
+	ArtifactsRegistryProvider string                     `json:"artifactsRegistryProvider,omitempty"`
+	SecretsProvider           string                     `json:"secretsProvider,omitempty"`
+	EcrCredentials            EcrCredentials             `json:"ecrCredentials,omitempty"`
+	DockerHubCredentials      DockerHubCredentials       `json:"dockerHubCredentials,omitempty"`
+	AcrCredentials            AcrCredentials             `json:"acrCredentials,omitempty"`
+	AwsSecretCredentials      AwsSecretCredentials       `json:"awsSecretCredentials,omitempty"`
+	AzureVaultCredentials     AzureVaultCredentials      `json:"azureVaultCredentials,omitempty"`
 	CommitId                  string                     `json:"commitId,omitempty"`
 	SourceCodeToken           string                     `json:"sourceCodeToken,omitempty"`
 	CloudRegion               string                     `json:"cloudRegion,omitempty"`
@@ -38,17 +81,10 @@ type DeploymentSetSpec struct {
 	ServiceYamlManifest       ServiceYamlManifestType    `json:"serviceYamlManifest"`
 	IngressYamlManifest       IngressYamlManifestType    `json:"ingressYamlManifest"`
 	DockerManifest            []string                   `json:"dockerManifest,omitempty"`
-	SecretManagerName         string                     `json:"secretManagerName,omitempty"`
+	BuildSecretsConfig        []SecretConfig             `json:"buildSecretsConfig,omitempty"`
+	ApplicationSecretsConfig  []SecretConfig             `json:"applicationSecretsConfig,omitempty"`
 	ManagedBy                 string                     `json:"managedBy,omitempty"`
-	AzureVaultToken           string                     `json:"azureVaultToken,omitempty"`
-	AzureVaultName            string                     `json:"azureVaultName,omitempty"`
-	AzureResourceGroupName    string                     `json:"azureResourceGroupName,omitempty"`
-	AzureSubscriptionId       string                     `json:"azureSubscriptionId,omitempty"`
-	AzureAcrRegistryName      string                     `json:"azureAcrRegistryName,omitempty"`
-	AzureManagementScopeToken string                     `json:"azureManagementScopeToken,omitempty"`
-	AwsEcrUserName            string                     `json:"awsEcrUserName,omitempty"`
 	UseDockerFromCodeFlag     bool                       `json:"useDockerFromCodeFlag,omitempty"`
-	AwsEcrRegistryUrl         string                     `json:"awsEcrRegistryUrl,omitempty"`
 	JobName                   string                     `json:"jobName"`
 	K8sAppName                string                     `json:"k8sAppName"`
 	Namespace                 string                     `json:"namespace"`

@@ -19,20 +19,15 @@ package controller
 import (
 	"context"
 	"encoding/json"
-	"flag"
 	"fmt"
 	"math"
 	"os"
-	"path/filepath"
 	"reflect"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/clientcmd"
-	"k8s.io/client-go/util/homedir"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -111,33 +106,72 @@ func (r *DeploymentSetReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	if err != nil {
 		deploymentSet.Spec.WebhookData = helpers.UpdateStatusData(deploymentSet.Spec.WebhookData, constants.DeploymentJobCreated, false)
 		sendDeploymentJobCreatedWebhook(*deploymentSet, false)
-		panic(err)
+	}
+	applicationSecretsConfig, err := json.Marshal(deploymentSet.Spec.ApplicationSecretsConfig)
+	if err != nil {
+		deploymentSet.Spec.WebhookData = helpers.UpdateStatusData(deploymentSet.Spec.WebhookData, constants.DeploymentJobCreated, false)
+		sendDeploymentJobCreatedWebhook(*deploymentSet, false)
+	}
+
+	buildSecretsConfig, err := json.Marshal(deploymentSet.Spec.BuildSecretsConfig)
+	if err != nil {
+		deploymentSet.Spec.WebhookData = helpers.UpdateStatusData(deploymentSet.Spec.WebhookData, constants.DeploymentJobCreated, false)
+		sendDeploymentJobCreatedWebhook(*deploymentSet, false)
 	}
 	serviceYamlManifest, err := json.Marshal(deploymentSet.Spec.ServiceYamlManifest)
 	if err != nil {
 		deploymentSet.Spec.WebhookData = helpers.UpdateStatusData(deploymentSet.Spec.WebhookData, constants.DeploymentJobCreated, false)
 		sendDeploymentJobCreatedWebhook(*deploymentSet, false)
-		panic(err)
 	}
 	deploymentYamlManifest, err := json.Marshal(deploymentSet.Spec.DeploymentYamlManifest)
 	if err != nil {
 		deploymentSet.Spec.WebhookData = helpers.UpdateStatusData(deploymentSet.Spec.WebhookData, constants.DeploymentJobCreated, false)
 		sendDeploymentJobCreatedWebhook(*deploymentSet, false)
-		panic(err)
 	}
 	DockerManifest, err := json.Marshal(deploymentSet.Spec.DockerManifest)
 	if err != nil {
 		deploymentSet.Spec.WebhookData = helpers.UpdateStatusData(deploymentSet.Spec.WebhookData, constants.DeploymentJobCreated, false)
 		sendDeploymentJobCreatedWebhook(*deploymentSet, false)
-		panic(err)
 	}
 	log.Info("Creating Job")
 	fmt.Println(deploymentSet.Spec.DockerManifest)
 	agentImageTag, exists := os.LookupEnv("AGENT_IMAGE_TAG")
+
 	if !exists {
 		agentImageTag = "latest"
+		fmt.Print(agentImageTag)
 	}
 	backoffLimit := int32(0)
+
+	ecrCredentials, err := json.Marshal(deploymentSet.Spec.EcrCredentials)
+	if err != nil {
+		deploymentSet.Spec.WebhookData = helpers.UpdateStatusData(deploymentSet.Spec.WebhookData, constants.DeploymentJobCreated, false)
+		sendDeploymentJobCreatedWebhook(*deploymentSet, false)
+	}
+
+	acrCredentials, err := json.Marshal(deploymentSet.Spec.AcrCredentials)
+	if err != nil {
+		deploymentSet.Spec.WebhookData = helpers.UpdateStatusData(deploymentSet.Spec.WebhookData, constants.DeploymentJobCreated, false)
+		sendDeploymentJobCreatedWebhook(*deploymentSet, false)
+	}
+
+	dockerHubCredentials, err := json.Marshal(deploymentSet.Spec.DockerHubCredentials)
+	if err != nil {
+		deploymentSet.Spec.WebhookData = helpers.UpdateStatusData(deploymentSet.Spec.WebhookData, constants.DeploymentJobCreated, false)
+		sendDeploymentJobCreatedWebhook(*deploymentSet, false)
+	}
+
+	awsSecretCredentials, err := json.Marshal(deploymentSet.Spec.AwsSecretCredentials)
+	if err != nil {
+		deploymentSet.Spec.WebhookData = helpers.UpdateStatusData(deploymentSet.Spec.WebhookData, constants.DeploymentJobCreated, false)
+		sendDeploymentJobCreatedWebhook(*deploymentSet, false)
+	}
+
+	azureVaultCredentials, err := json.Marshal(deploymentSet.Spec.AzureVaultCredentials)
+	if err != nil {
+		deploymentSet.Spec.WebhookData = helpers.UpdateStatusData(deploymentSet.Spec.WebhookData, constants.DeploymentJobCreated, false)
+		sendDeploymentJobCreatedWebhook(*deploymentSet, false)
+	}
 
 	jobObj := &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
@@ -156,8 +190,14 @@ func (r *DeploymentSetReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 							Image:           "public.ecr.aws/humalect/core-agent:" + agentImageTag,
 							ImagePullPolicy: corev1.PullPolicy("Always"),
 							Args: []string{
+								fmt.Sprintf("--artifactsRegistryProvider=%s", deploymentSet.Spec.ArtifactsRegistryProvider),
+								fmt.Sprintf("--secretsProvider=%s", deploymentSet.Spec.SecretsProvider),
+								fmt.Sprintf("--ecrCredentials=%s", ecrCredentials),
+								fmt.Sprintf("--acrCredentials=%s", acrCredentials),
+								fmt.Sprintf("--dockerHubCredentials=%s", dockerHubCredentials),
+								fmt.Sprintf("--awsSecretCredentials=%s", awsSecretCredentials),
+								fmt.Sprintf("--azureVaultCredentials=%s", azureVaultCredentials),
 								fmt.Sprintf("--cloudProvider=%s", deploymentSet.Spec.CloudProvider),
-								fmt.Sprintf("--azureManagementScopeToken=%s", deploymentSet.Spec.AzureManagementScopeToken),
 								fmt.Sprintf("--sourceCodeRepositoryName=%s", deploymentSet.Spec.SourceCodeRepositoryName),
 								fmt.Sprintf("--sourceCodeProvider=%s", deploymentSet.Spec.SourceCodeProvider),
 								fmt.Sprintf("--sourceCodeToken=%s", deploymentSet.Spec.SourceCodeToken),
@@ -166,18 +206,12 @@ func (r *DeploymentSetReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 								fmt.Sprintf("--dockerManifest=%s", DockerManifest),
 								fmt.Sprintf("--k8sAppName=%s", deploymentSet.Spec.K8sAppName),
 								fmt.Sprintf("--artifactsRepositoryName=%s", deploymentSet.Spec.ArtifactsRepositoryName),
-								fmt.Sprintf("--awsEcrRegistryUrl=%s", deploymentSet.Spec.AwsEcrRegistryUrl),
-								fmt.Sprintf("--azureAcrRegistryName=%s", deploymentSet.Spec.AzureAcrRegistryName),
-								fmt.Sprintf("--awsEcrUserName=%s", deploymentSet.Spec.AwsEcrUserName),
-								fmt.Sprintf("--azureSubscriptionId=%s", deploymentSet.Spec.AzureSubscriptionId),
-								fmt.Sprintf("--azureResourceGroupName=%s", deploymentSet.Spec.AzureResourceGroupName),
 								fmt.Sprintf("--useDockerFromCodeFlag=%t", deploymentSet.Spec.UseDockerFromCodeFlag),
 								fmt.Sprintf("--managedBy=%s", deploymentSet.Spec.ManagedBy),
 								fmt.Sprintf("--cloudRegion=%s", deploymentSet.Spec.CloudRegion),
 								fmt.Sprintf("--k8sResourcesIdentifier=%s", deploymentSet.Spec.K8sResourcesIdentifier),
-								fmt.Sprintf("--azureVaultToken=%s", deploymentSet.Spec.AzureVaultToken),
-								fmt.Sprintf("--secretManagerName=%s", deploymentSet.Spec.SecretManagerName),
-								fmt.Sprintf("--azureVaultName=%s", deploymentSet.Spec.AzureVaultName),
+								fmt.Sprintf("--buildSecretsConfig=%s", buildSecretsConfig),
+								fmt.Sprintf("--applicationSecretsConfig=%s", applicationSecretsConfig),
 								fmt.Sprintf("--namespace=%s", deploymentSet.Spec.Namespace),
 								fmt.Sprintf("--deploymentId=%s", deploymentSet.Spec.DeploymentId),
 								fmt.Sprintf("--ingressYamlManifest=%s", ingressYamlManifest),
@@ -212,9 +246,9 @@ func (r *DeploymentSetReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 			// }
 			// sendDeploymentJobCreatedWebhook(*deploymentSet, true)
 			// log.Info("Created Resource", reflect.TypeOf(jobObj).String(), jobObj.GetName())
-			var kubeconfig *string
-			home := homedir.HomeDir()
-			kubeconfig = flag.String("kubecon1fig", filepath.Join(home, ".kube", "config"), "(optional) absolute path to the kubeconfig file")
+			// var kubeconfig *string
+			// home := homedir.HomeDir()
+			// kubeconfig = flag.String("kubecon1fig", filepath.Join(home, ".kube", "config"), "(optional) absolute path to the kubeconfig file")
 
 			// Set up the default Kubeconfig file path.
 			// if ; home != "" {
@@ -223,24 +257,14 @@ func (r *DeploymentSetReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 			// }
 			// flag.Parse()
 
-			config, err := rest.InClusterConfig()
-			if err != nil {
-				config, err = clientcmd.BuildConfigFromFlags("", *kubeconfig)
-				if err != nil {
-					log.Error(err, "Error getting in-cluster config")
-					deploymentSet.Spec.WebhookData = helpers.UpdateStatusData(deploymentSet.Spec.WebhookData, constants.DeploymentJobCreated, false)
-					sendDeploymentJobCreatedWebhook(*deploymentSet, false)
-					panic(err)
-				}
+			config := helpers.GetK8sConfig()
 
-			}
 			clientset, err := kubernetes.NewForConfig(config)
 			if err != nil {
 				log.Error(err, "Error creating clientset")
 				deploymentSet.Spec.WebhookData = helpers.UpdateStatusData(deploymentSet.Spec.WebhookData, constants.DeploymentJobCreated, false)
 
 				sendDeploymentJobCreatedWebhook(*deploymentSet, false)
-				panic(err)
 			}
 			jobClient := clientset.BatchV1().Jobs("humalect")
 			jobObj.SetNamespace("humalect")
@@ -250,7 +274,6 @@ func (r *DeploymentSetReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 				deploymentSet.Spec.WebhookData = helpers.UpdateStatusData(deploymentSet.Spec.WebhookData, constants.DeploymentJobCreated, false)
 
 				sendDeploymentJobCreatedWebhook(*deploymentSet, false)
-				panic(err)
 			}
 			deploymentSet.Spec.WebhookData = helpers.UpdateStatusData(deploymentSet.Spec.WebhookData, constants.DeploymentJobCreated, true)
 

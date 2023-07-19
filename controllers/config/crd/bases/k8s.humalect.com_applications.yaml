@@ -27,9 +27,23 @@ spec:
               type: object
             spec:
               properties:
-                azureVaultName:
-                  type: string
-                azureVaultToken:
+                awsSecretCredentials:
+                  properties:
+                    accessKey:
+                      type: string
+                    secretKey:
+                      type: string
+                    region:
+                      type: string
+                  type: object
+                azureVaultCredentials:
+                  properties:
+                    token:
+                      type: string
+                    name:
+                      type: string
+                  type: object
+                secretsProvider:
                   type: string
                 cloudProvider:
                   type: string
@@ -168,8 +182,28 @@ spec:
                   type: string
                 cloudRegion:
                   type: string
-                secretManagerName:
-                  type: string
+                applicationSecretsConfig:
+                  items:
+                    properties:
+                      contentType:
+                        type: string
+                      name:
+                        type: string
+                    required:
+                      - name
+                    type: object
+                  type: array
+                buildSecretsConfig:
+                  items:
+                    properties:
+                      contentType:
+                        type: string
+                      name:
+                        type: string
+                    required:
+                      - name
+                    type: object
+                  type: array
                 serviceYamlManifest:
                   properties:
                     metadata:

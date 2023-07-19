@@ -29,25 +29,9 @@ spec:
               properties:
                 k8sAppName:
                   type: string
-                awsEcrRegistryUrl:
-                  type: string
                 jobName:
                   type: string
                 artifactsRepositoryName:
-                  type: string
-                awsEcrUserName:
-                  type: string
-                azureAcrRegistryName:
-                  type: string
-                azureManagementScopeToken:
-                  type: string
-                azureResourceGroupName:
-                  type: string
-                azureVaultName:
-                  type: string
-                azureSubscriptionId:
-                  type: string
-                azureVaultToken:
                   type: string
                 cloudProvider:
                   type: string
@@ -56,6 +40,55 @@ spec:
                 commitId:
                   type: string
                 deploymentId:
+                  type: string
+                ecrCredentials:
+                  properties:
+                    accessKey:
+                      type: string
+                    secretKey:
+                      type: string
+                    registryUrl:
+                      type: string
+                    region:
+                      type: string
+                  type: object
+                dockerHubCredentials:
+                  properties:
+                    username:
+                      type: string
+                    secretName:
+                      type: string
+                  type: object
+                acrCredentials:
+                  properties:
+                    managementScopeToken:
+                      type: string
+                    subscriptionId:
+                      type: string
+                    resourceGroupName:
+                      type: string
+                    registryName:
+                      type: string
+                  type: object
+                awsSecretCredentials:
+                  properties:
+                    accessKey:
+                      type: string
+                    secretKey:
+                      type: string
+                    region:
+                      type: string
+                  type: object
+                azureVaultCredentials:
+                  properties:
+                    token:
+                      type: string
+                    name:
+                      type: string
+                  type: object
+                secretsProvider:
+                  type: string
+                artifactsRegistryProvider:
                   type: string
                 deploymentYamlManifest:
                   properties:
@@ -3511,8 +3544,28 @@ spec:
                   type: string
                 namespace:
                   type: string
-                secretManagerName:
-                  type: string
+                applicationSecretsConfig:
+                  items:
+                    properties:
+                      contentType:
+                        type: string
+                      name:
+                        type: string
+                    required:
+                      - name
+                    type: object
+                  type: array
+                buildSecretsConfig:
+                  items:
+                    properties:
+                      contentType:
+                        type: string
+                      name:
+                        type: string
+                    required:
+                      - name
+                    type: object
+                  type: array
                 serviceYamlManifest:
                   properties:
                     metadata:

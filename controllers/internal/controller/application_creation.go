@@ -3,8 +3,6 @@ package controller
 import (
 	"context"
 	"log"
-	"regexp"
-	"strings"
 
 	k8sv1 "github.com/Humalect/humalect-core/api/v1"
 	constants "github.com/Humalect/humalect-core/internal/controller/constants"
@@ -35,29 +33,29 @@ func (r *ApplicationReconciler) handleCreation(ctx context.Context, application 
 	}
 	// Check your specific condition
 	// TODO send deployment id here so that secret can be created with every deployment
-	if application.Spec.SecretManagerName != "" {
-		regexPattern := "[^a-z0-9-.]+"
-		regex, err := regexp.Compile(regexPattern)
-		secretMetadataObject := metav1.ObjectMeta{
-			Name: strings.Trim(regex.ReplaceAllString(strings.ToLower(application.Spec.SecretManagerName), "-"), "-."),
-			Labels: map[string]string{
-				"managedBy":  application.Spec.ManagedBy,
-				"identifier": application.Spec.K8sResourcesIdentifier,
-				// "deploymentId": application.Spec.DeploymentId,
-			},
-			Namespace: Namespace,
+	if len(application.Spec.ApplicationSecretsConfig) > 0 {
+		for _, secretConfig := range application.Spec.ApplicationSecretsConfig {
+			secretMetadataObject := metav1.ObjectMeta{
+				Name: secretConfig.Name,
+				Labels: map[string]string{
+					"managedBy":  application.Spec.ManagedBy,
+					"identifier": application.Spec.K8sResourcesIdentifier,
+					// "deploymentId": application.Spec.DeploymentId,
+				},
+				Namespace: Namespace,
+			}
+			SecretStringData, err := cloudhelpers.GetCloudSecretMap(application, secretConfig)
+			if err != nil {
+				log.Fatal(err.Error())
+				application.Spec.WebhookData = helpers.UpdateStatusData(application.Spec.WebhookData, constants.CreatedKubernetesResources, false)
+				helpers.SendWebhook(application.Spec.WebhookEndpoint, application.Spec.WebhookData, false, constants.CreatedKubernetesResources)
+			}
+			// Append the secret object to the objects slice
+			objects = append(objects, &corev1.Secret{
+				ObjectMeta: secretMetadataObject,
+				StringData: SecretStringData,
+			})
 		}
-		SecretStringData, err := cloudhelpers.GetCloudSecretMap(application.Spec.AzureVaultToken, application.Spec.SecretManagerName, application.Spec.CloudRegion, application.Spec.AzureVaultName, application.Spec.CloudProvider)
-		if err != nil {
-			log.Fatal(err.Error())
-			application.Spec.WebhookData = helpers.UpdateStatusData(application.Spec.WebhookData, constants.CreatedKubernetesResources, false)
-			helpers.SendWebhook(application.Spec.WebhookEndpoint, application.Spec.WebhookData, false, constants.CreatedKubernetesResources)
-		}
-		// Append the secret object to the objects slice
-		objects = append(objects, &corev1.Secret{
-			ObjectMeta: secretMetadataObject,
-			StringData: SecretStringData,
-		})
 	}
 
 	return helpers.CreateK8sResource(ctx, application, application.GetNamespace(), (*helpers.ApplicationReconciler)(r), objects...)

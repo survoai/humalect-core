@@ -3,6 +3,7 @@ module github.com/Humalect/humalect-core/agent
 go 1.20
 
 require (
+	github.com/aws/aws-sdk-go v1.44.288
 	github.com/aws/aws-sdk-go-v2/config v1.18.25
 	github.com/aws/aws-sdk-go-v2/service/ecr v1.18.11
 	github.com/docker/docker v24.0.1+incompatible
