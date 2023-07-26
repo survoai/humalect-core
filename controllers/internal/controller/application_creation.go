@@ -3,6 +3,8 @@ package controller
 import (
 	"context"
 	"log"
+	"regexp"
+	"strings"
 
 	k8sv1 "github.com/Humalect/humalect-core/api/v1"
 	constants "github.com/Humalect/humalect-core/internal/controller/constants"
@@ -35,8 +37,10 @@ func (r *ApplicationReconciler) handleCreation(ctx context.Context, application 
 	// TODO send deployment id here so that secret can be created with every deployment
 	if len(application.Spec.ApplicationSecretsConfig) > 0 {
 		for _, secretConfig := range application.Spec.ApplicationSecretsConfig {
+			regexPattern := "[^a-z0-9-.]+"
+			regex, err := regexp.Compile(regexPattern)
 			secretMetadataObject := metav1.ObjectMeta{
-				Name: secretConfig.Name,
+				Name: strings.Trim(regex.ReplaceAllString(strings.ToLower(secretConfig.Name), "-"), "-."),
 				Labels: map[string]string{
 					"managedBy":  application.Spec.ManagedBy,
 					"identifier": application.Spec.K8sResourcesIdentifier,
