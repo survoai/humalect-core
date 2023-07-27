@@ -217,6 +217,7 @@ func (r *DeploymentSetReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 								fmt.Sprintf("--ingressYamlManifest=%s", ingressYamlManifest),
 								fmt.Sprintf("--serviceYamlManifest=%s", serviceYamlManifest),
 								fmt.Sprintf("--deploymentYamlManifest=%s", deploymentYamlManifest),
+								fmt.Sprintf("--pipelineId=%s", deploymentSet.Spec.PipelineId),
 								fmt.Sprintf("--webhookEndpoint=%s", deploymentSet.Spec.WebhookEndpoint),
 								fmt.Sprintf("--webhookData=%s", helpers.UpdateStatusData(deploymentSet.Spec.WebhookData, constants.DeploymentJobCreated, true)),
 							},

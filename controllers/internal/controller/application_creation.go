@@ -42,9 +42,12 @@ func (r *ApplicationReconciler) handleCreation(ctx context.Context, application 
 			secretMetadataObject := metav1.ObjectMeta{
 				Name: strings.Trim(regex.ReplaceAllString(strings.ToLower(secretConfig.Name), "-"), "-."),
 				Labels: map[string]string{
-					"managedBy":  application.Spec.ManagedBy,
-					"identifier": application.Spec.K8sResourcesIdentifier,
-					// "deploymentId": application.Spec.DeploymentId,
+					"managedBy":    application.Spec.ManagedBy,
+					"identifier":   application.Spec.K8sResourcesIdentifier,
+					"deploymentId": application.Spec.DeploymentId,
+					"pipelineId":   application.Spec.PipelineId,
+					"partOf":       "client-application",
+					"resourceType": "client-application-secret",
 				},
 				Namespace: Namespace,
 			}
