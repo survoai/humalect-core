@@ -86,17 +86,17 @@ func (r *DeploymentSetReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	err := r.Get(ctx, req.NamespacedName, deploymentSet)
 	if err != nil {
 		if errors.IsNotFound(err) {
-			log.Info("DeploymentSet not found, ignoring reconcile")
+			log.Info(fmt.Sprintf("log for <depid:%s> <pipeid:%s> DeploymentSet not found, ignoring reconcile", deploymentSet.Spec.DeploymentId, deploymentSet.Spec.PipelineId))
 			return ctrl.Result{}, nil
 		}
-		log.Error(err, "Failed to get DeploymentSet")
+		log.Error(err, fmt.Sprintf("log for <depid:%s> <pipeid:%s> ERROR: Failed to get Application, %v", deploymentSet.Spec.DeploymentId, deploymentSet.Spec.PipelineId, err))
 		return ctrl.Result{}, err
 	}
 
 	if !deploymentSet.DeletionTimestamp.IsZero() {
 		deploymentSet.ObjectMeta.Finalizers = removeString(deploymentSet.ObjectMeta.Finalizers, deploymentSetFinalizer)
 		if err := r.Update(ctx, deploymentSet); err != nil {
-			fmt.Println("There is some error ", err)
+			log.Error(err, fmt.Sprintf("log for <depid:%s> <pipeid:%s> ERROR: There is some error, %v", deploymentSet.Spec.DeploymentId, deploymentSet.Spec.PipelineId, err))
 			return ctrl.Result{}, err
 		}
 		return ctrl.Result{}, nil
@@ -133,13 +133,11 @@ func (r *DeploymentSetReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		deploymentSet.Spec.WebhookData = helpers.UpdateStatusData(deploymentSet.Spec.WebhookData, constants.DeploymentJobCreated, false)
 		sendDeploymentJobCreatedWebhook(*deploymentSet, false)
 	}
-	log.Info("Creating Job")
-	fmt.Println(deploymentSet.Spec.DockerManifest)
+	log.Info(fmt.Sprintf("log for <depid:%s> <pipeid:%s> Creating Job", deploymentSet.Spec.DeploymentId, deploymentSet.Spec.PipelineId))
 	agentImageTag, exists := os.LookupEnv("AGENT_IMAGE_TAG")
 
 	if !exists {
 		agentImageTag = "latest"
-		fmt.Print(agentImageTag)
 	}
 	backoffLimit := int32(0)
 
@@ -262,15 +260,14 @@ func (r *DeploymentSetReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 
 			clientset, err := kubernetes.NewForConfig(config)
 			if err != nil {
-				log.Error(err, "Error creating clientset")
+				log.Error(err, fmt.Sprintf("log for <depid:%s> <pipeid:%s> ERROR: Error creating clientset, %v", deploymentSet.Spec.DeploymentId, deploymentSet.Spec.PipelineId, err))
 				deploymentSet.Spec.WebhookData = helpers.UpdateStatusData(deploymentSet.Spec.WebhookData, constants.DeploymentJobCreated, false)
 
 				sendDeploymentJobCreatedWebhook(*deploymentSet, false)
 			}
 			jobClient := clientset.BatchV1().Jobs("humalect")
 			jobObj.SetNamespace("humalect")
-			createdJob, err := jobClient.Create(context.Background(), jobObj, metav1.CreateOptions{})
-			fmt.Println(createdJob.GetNamespace())
+			_, err = jobClient.Create(context.Background(), jobObj, metav1.CreateOptions{})
 			if err != nil {
 				deploymentSet.Spec.WebhookData = helpers.UpdateStatusData(deploymentSet.Spec.WebhookData, constants.DeploymentJobCreated, false)
 
@@ -285,12 +282,13 @@ func (r *DeploymentSetReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 			sendDeploymentJobCreatedWebhook(*deploymentSet, false)
 			deploymentSet.Spec.WebhookData = helpers.UpdateStatusData(deploymentSet.Spec.WebhookData, constants.DeploymentJobCreated, false)
 
-			log.Error(err, "Failed to get", reflect.TypeOf(emptyObj).String(), jobObj.GetName())
+			log.Error(err, fmt.Sprintf("log for <depid:%s> <pipeid:%s> ERROR: Failed to get, %v", deploymentSet.Spec.DeploymentId, deploymentSet.Spec.PipelineId, err), reflect.TypeOf(emptyObj).String(), jobObj.GetName())
+
 			return ctrl.Result{}, err
 		}
 	} else {
 		// sendDeploymentJobCreatedWebhook(*deploymentSet, true)
-		log.Info("Job already exists, skipping creation", reflect.TypeOf(jobObj).String(), jobObj.GetName())
+		log.Info(fmt.Sprintf("log for <depid:%s> <pipeid:%s> Job already exists, skipping creation", deploymentSet.Spec.DeploymentId, deploymentSet.Spec.PipelineId), reflect.TypeOf(jobObj).String(), jobObj.GetName())
 	}
 
 	return ctrl.Result{}, nil
