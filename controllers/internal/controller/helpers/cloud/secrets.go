@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"time"
 
@@ -30,7 +29,6 @@ func GetCloudSecretMap(application *k8sv1.Application, secretConfig k8sv1.Secret
 			awsConfig, err = config.LoadDefaultConfig(context.TODO(), config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(application.Spec.AwsSecretCredentials.AccessKey, application.Spec.AwsSecretCredentials.SecretKey, "")))
 		}
 		if err != nil {
-			log.Fatal(err)
 			return map[string]string{}, err
 		}
 
@@ -39,7 +37,6 @@ func GetCloudSecretMap(application *k8sv1.Application, secretConfig k8sv1.Secret
 	} else if application.Spec.SecretsProvider == constants.CloudIdAzure || (application.Spec.SecretsProvider == "" && application.Spec.CloudProvider == constants.CloudIdAzure) {
 		secretString, err = getAzureSecretString(application.Spec.AzureVaultCredentials.Token, application.Spec.AzureVaultCredentials.Name, secretConfig.Name)
 		if err != nil {
-			log.Fatal(err.Error())
 			return map[string]string{}, err
 		}
 	} else {
@@ -47,7 +44,6 @@ func GetCloudSecretMap(application *k8sv1.Application, secretConfig k8sv1.Secret
 	}
 	err = json.Unmarshal([]byte(secretString), &secretsMap)
 	if err != nil {
-		log.Fatal(err.Error())
 		return map[string]string{}, err
 	}
 	return secretsMap, nil
@@ -63,7 +59,6 @@ func getAwsSecretString(config aws.Config, secretName string, region string) (st
 	}
 	result, err := svc.GetSecretValue(context.TODO(), input)
 	if err != nil {
-		log.Fatal(err.Error())
 		return "", err
 	}
 
