@@ -36,6 +36,7 @@ func ParseCLIArguments() *constants.ParamsConfig {
 	flag.StringVar(&config.Namespace, "namespace", "", "This is an optional parameter and represents the namespace in which you want to deploy the k8s resources.(it is set to default if not passed)")
 	flag.StringVar(&config.DeploymentId, "deploymentId", "", "This is a required parameter and represents the unique deployment id for each deployment.")
 	flag.StringVar(&config.WebhookEndpoint, "webhookEndpoint", "", "This is an optional parameter and represents the endpoint which can be used to send webhook notifications.")
+	flag.StringVar(&config.PipelineId, "pipelineId", "", "This is a required parameter that represents the pipeline if for the deployment.")
 	flag.StringVar(&config.WebhookData, "webhookData", "", "This is an optional parameter and represents the data that is to be sent to the webhook endpoint(in json string format).")
 
 	flag.Parse()

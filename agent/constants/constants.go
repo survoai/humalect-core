@@ -88,6 +88,7 @@ type ParamsConfig struct {
 	DeploymentId              string
 	WebhookEndpoint           string
 	WebhookData               string
+	PipelineId                string
 }
 type SecretConfig struct {
 	Name        string `json:"name"`

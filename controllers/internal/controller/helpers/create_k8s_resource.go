@@ -2,6 +2,7 @@ package helpers
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 
 	k8sv1 "github.com/Humalect/humalect-core/api/v1"
@@ -33,10 +34,11 @@ func createEmptyObject(obj Object) Object {
 func CreateK8sResource(ctx context.Context, application *k8sv1.Application, namespace string, r *ApplicationReconciler, objs ...Object) (ctrl.Result, error) {
 	log := log.FromContext(ctx)
 	for _, obj := range objs {
-		log.Info("Create Resource - ", reflect.TypeOf(obj).String(), obj.GetObjectKind())
-		emptyObj := createEmptyObject(obj)
+		log.Info(fmt.Sprintf("log for <depid:%s> <pipeid:%s> Create Resource - ", application.Spec.DeploymentId, application.Spec.PipelineId), reflect.TypeOf(obj).String(), obj.GetObjectKind())
 
-		log.Info("Handling creation", reflect.TypeOf(obj).String(), obj.GetName())
+		emptyObj := createEmptyObject(obj)
+		log.Info(fmt.Sprintf("log for <depid:%s> <pipeid:%s> Handling creation - ", application.Spec.DeploymentId, application.Spec.PipelineId), reflect.TypeOf(obj).String(), obj.GetObjectKind())
+
 		obj.SetNamespace(namespace)
 
 		if err := r.Get(ctx, client.ObjectKey{Name: obj.GetName(), Namespace: namespace}, emptyObj); err != nil {

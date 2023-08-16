@@ -2,9 +2,11 @@ package controller
 
 import (
 	"context"
-	"log"
+	"fmt"
 	"regexp"
 	"strings"
+
+	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	k8sv1 "github.com/Humalect/humalect-core/api/v1"
 	constants "github.com/Humalect/humalect-core/internal/controller/constants"
@@ -19,6 +21,8 @@ import (
 
 func (r *ApplicationReconciler) handleCreation(ctx context.Context, application *k8sv1.Application, DeploymentYamlManifest k8sv1.DeploymentYamlManifestType, ServiceYamlManifest k8sv1.ServiceYamlManifestType, IngressYamlManifest k8sv1.IngressYamlManifestType, Namespace string) (ctrl.Result, error) {
 	// Create a slice of Object to store the objects you want to pass
+	log := log.FromContext(ctx)
+
 	objects := []helpers.Object{
 		&appsv1.Deployment{
 			ObjectMeta: DeploymentYamlManifest.Metadata,
@@ -42,15 +46,18 @@ func (r *ApplicationReconciler) handleCreation(ctx context.Context, application 
 			secretMetadataObject := metav1.ObjectMeta{
 				Name: strings.Trim(regex.ReplaceAllString(strings.ToLower(secretConfig.Name), "-"), "-."),
 				Labels: map[string]string{
-					"managedBy":  application.Spec.ManagedBy,
-					"identifier": application.Spec.K8sResourcesIdentifier,
-					// "deploymentId": application.Spec.DeploymentId,
+					"managedBy":    application.Spec.ManagedBy,
+					"identifier":   application.Spec.K8sResourcesIdentifier,
+					"deploymentId": application.Spec.DeploymentId,
+					"pipelineId":   application.Spec.PipelineId,
+					"partOf":       "client-application",
+					"resourceType": "client-application-secret",
 				},
 				Namespace: Namespace,
 			}
 			SecretStringData, err := cloudhelpers.GetCloudSecretMap(application, secretConfig)
 			if err != nil {
-				log.Fatal(err.Error())
+				log.Error(err, fmt.Sprintf("log for <depid:%s> <pipeid:%s> ERROR: Failed to get cloud Secret Data, %v", application.Spec.DeploymentId, application.Spec.PipelineId, err))
 				application.Spec.WebhookData = helpers.UpdateStatusData(application.Spec.WebhookData, constants.CreatedKubernetesResources, false)
 				helpers.SendWebhook(application.Spec.WebhookEndpoint, application.Spec.WebhookData, false, constants.CreatedKubernetesResources)
 			}

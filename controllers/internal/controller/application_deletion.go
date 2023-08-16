@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	k8sv1 "github.com/Humalect/humalect-core/api/v1"
 )
@@ -41,9 +42,11 @@ func (r *ApplicationReconciler) handleDeletion(ctx context.Context, application 
 	// Remove the finalizer and update the Application
 	finalizerName := "finalizers.humalect.com/application"
 	if containsString(application.ObjectMeta.Finalizers, finalizerName) {
+		log := log.FromContext(ctx)
+
 		application.ObjectMeta.Finalizers = removeString(application.ObjectMeta.Finalizers, finalizerName)
 		if err := r.Update(ctx, application); err != nil {
-			fmt.Println("There is some error ", err)
+			log.Error(err, fmt.Sprintf("log for <depid:%s> <pipeid:%s> ERROR: Failed to get Application, %v", application.Spec.DeploymentId, application.Spec.PipelineId, err))
 			return ctrl.Result{}, err
 		}
 	}

@@ -91,6 +91,7 @@ type DeploymentSetSpec struct {
 	DeploymentId              string                     `json:"deploymentId"`
 	WebhookData               string                     `json:"webhookData"`
 	WebhookEndpoint           string                     `json:"webhookEndpoint"`
+	PipelineId                string                     `json:"pipelineId"`
 }
 
 // DeploymentSetStatus defines the observed state of DeploymentSet
