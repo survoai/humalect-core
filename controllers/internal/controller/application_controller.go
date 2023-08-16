@@ -64,7 +64,6 @@ const (
 )
 
 func (r *ApplicationReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-
 	log := log.FromContext(ctx)
 
 	// Fetch the Application instance
@@ -72,12 +71,13 @@ func (r *ApplicationReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	err := r.Get(ctx, req.NamespacedName, application)
 	if err != nil {
 		if errors.IsNotFound(err) {
-			log.Info("Application not found, ignoring reconcile")
+			log.Info(fmt.Sprintf("log for <depid:%s> <pipeid:%s> Application not found, ignoring reconcile", application.Spec.DeploymentId, application.Spec.PipelineId))
 			application.Spec.WebhookData = helpers.UpdateStatusData(application.Spec.WebhookData, constants.CreatedKubernetesResources, false)
 			helpers.SendWebhook(application.Spec.WebhookEndpoint, application.Spec.WebhookData, false, constants.CreatedKubernetesResources)
 			return ctrl.Result{}, nil
 		}
-		log.Error(err, "Failed to get Application")
+		log.Error(err, fmt.Sprintf("log for <depid:%s> <pipeid:%s> ERROR: Failed to get Application, %v", application.Spec.DeploymentId, application.Spec.PipelineId, err))
+
 		return ctrl.Result{}, err
 	}
 

@@ -62,6 +62,9 @@ func CreateK8sApplication(params *constants.ParamsConfig, kanikoJobResources Cre
 					"app.kubernetes.io/created-by": "humalect-core",
 					"deploymentId":                 params.DeploymentId,
 					"managedBy":                    params.ManagedBy,
+					"partOf":                       "humalect-core",
+					"pipelineId":                   params.PipelineId,
+					"resourceType":                         "humalect-application",
 				},
 				"name": params.K8sAppName,
 				"finalizers": []interface{}{
@@ -84,6 +87,7 @@ func CreateK8sApplication(params *constants.ParamsConfig, kanikoJobResources Cre
 				"namespace":                params.Namespace,
 				"webhookEndpoint":          params.WebhookEndpoint,
 				"webhookData":              webhookData,
+				"pipelineId":               params.PipelineId,
 			},
 		},
 	}

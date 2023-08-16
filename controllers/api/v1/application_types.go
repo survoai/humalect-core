@@ -60,6 +60,8 @@ type ApplicationSpec struct {
 	Namespace                string                     `json:"namespace"`
 	WebhookEndpoint          string                     `json:"webhookEndpoint"`
 	WebhookData              string                     `json:"webhookData"`
+	PipelineId               string                     `json:"pipelineId"`
+	DeploymentId             string                     `json:"deploymentId"`
 }
 
 // ApplicationStatus defines the observed state of Application
