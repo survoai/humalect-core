@@ -13,6 +13,7 @@ import (
 	"github.com/Humalect/humalect-core/agent/services/aws"
 	"github.com/Humalect/humalect-core/agent/services/azure"
 	"github.com/Humalect/humalect-core/agent/services/dockerhub"
+	"github.com/Humalect/humalect-core/agent/utils"
 
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -146,20 +147,21 @@ func getKanikoJobObject(
 	params constants.ParamsConfig,
 ) (batchv1.Job, error) {
 	var artifactsRepoUrl string
+	var imageTag=utils.MergeParseString(params.CommitId, params.PipelineId, 30)
 	if params.ArtifactsRegistryProvider == constants.RegistryIdAzure || (params.ArtifactsRegistryProvider == "" && params.CloudProvider == constants.CloudIdAzure) {
 		var acrCredentials constants.AcrCredentials
 		_ = json.Unmarshal([]byte(params.AcrCredentials), &acrCredentials)
-		artifactsRepoUrl = fmt.Sprintf("%s.azurecr.io/%s:%s%s", acrCredentials.RegistryName, params.
-			ArtifactsRepositoryName, params.CommitId[:15],params.PipelineId)
+		artifactsRepoUrl = fmt.Sprintf("%s.azurecr.io/%s:%s", acrCredentials.RegistryName, params.
+			ArtifactsRepositoryName, imageTag)
 	} else if params.ArtifactsRegistryProvider == constants.RegistryIdAWS || (params.ArtifactsRegistryProvider == "" && params.CloudProvider == constants.CloudIdAWS) {
 		var ecrCredentials constants.EcrCredentials
 		_ = json.Unmarshal([]byte(params.EcrCredentials), &ecrCredentials)
 		artifactsRepoUrl = fmt.Sprintf("%s/%s:%s", ecrCredentials.RegistryUrl, params.
-			ArtifactsRepositoryName, params.CommitId)
+			ArtifactsRepositoryName, imageTag)
 	} else if params.ArtifactsRegistryProvider == constants.RegistryIdDockerhub {
 		var dockerHubCreds constants.DockerHubCredentials
 		_ = json.Unmarshal([]byte(params.DockerHubCredentials), &dockerHubCreds)
-		artifactsRepoUrl = fmt.Sprintf("%s/%s:%s", dockerHubCreds.Username, params.ArtifactsRepositoryName, params.CommitId)
+		artifactsRepoUrl = fmt.Sprintf("%s/%s:%s", dockerHubCreds.Username, params.ArtifactsRepositoryName, imageTag)
 
 	} else {
 		fmt.Println("Invalid Artifacts Registry Provider received.")
