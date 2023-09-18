@@ -149,8 +149,8 @@ func getKanikoJobObject(
 	if params.ArtifactsRegistryProvider == constants.RegistryIdAzure || (params.ArtifactsRegistryProvider == "" && params.CloudProvider == constants.CloudIdAzure) {
 		var acrCredentials constants.AcrCredentials
 		_ = json.Unmarshal([]byte(params.AcrCredentials), &acrCredentials)
-		artifactsRepoUrl = fmt.Sprintf("%s.azurecr.io/%s:%s", acrCredentials.RegistryName, params.
-			ArtifactsRepositoryName, params.CommitId)
+		artifactsRepoUrl = fmt.Sprintf("%s.azurecr.io/%s:%s%s", acrCredentials.RegistryName, params.
+			ArtifactsRepositoryName, params.CommitId[:15],params.PipelineId)
 	} else if params.ArtifactsRegistryProvider == constants.RegistryIdAWS || (params.ArtifactsRegistryProvider == "" && params.CloudProvider == constants.CloudIdAWS) {
 		var ecrCredentials constants.EcrCredentials
 		_ = json.Unmarshal([]byte(params.EcrCredentials), &ecrCredentials)
