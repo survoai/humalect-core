@@ -3687,6 +3687,8 @@ spec:
                   type: string
                 webhookEndpoint:
                   type: string
+                pipelineId:
+                  type: string
               required:
                 - deploymentId
                 - deploymentYamlManifest
