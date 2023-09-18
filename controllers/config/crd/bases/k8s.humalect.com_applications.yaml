@@ -3632,6 +3632,8 @@ spec:
                   type: string
                 webhookEndpoint:
                   type: string
+                pipelineId:
+                  type: string
               required:
                 - deploymentYamlManifest
                 - ingressYamlManifest
