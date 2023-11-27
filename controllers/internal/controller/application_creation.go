@@ -60,12 +60,14 @@ func (r *ApplicationReconciler) handleCreation(ctx context.Context, application 
 				log.Error(err, fmt.Sprintf("log for <depid:%s> <pipeid:%s> ERROR: Failed to get cloud Secret Data, %v", application.Spec.DeploymentId, application.Spec.PipelineId, err))
 				application.Spec.WebhookData = helpers.UpdateStatusData(application.Spec.WebhookData, constants.CreatedKubernetesResources, false)
 				helpers.SendWebhook(application.Spec.WebhookEndpoint, application.Spec.WebhookData, false, constants.CreatedKubernetesResources)
+			} else {
+				objects = append(objects, &corev1.Secret{
+					ObjectMeta: secretMetadataObject,
+					StringData: SecretStringData,
+				})
 			}
 			// Append the secret object to the objects slice
-			objects = append(objects, &corev1.Secret{
-				ObjectMeta: secretMetadataObject,
-				StringData: SecretStringData,
-			})
+
 		}
 	}
 
