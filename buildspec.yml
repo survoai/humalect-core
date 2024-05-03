@@ -13,7 +13,7 @@ phases:
     commands:
       - export CONTROLLER_IMG=$REPO_HOST/$CONTROLLER_REPO_NAME:$BRANCH_NAME.$(date +%Y-%m-%d.%H.%M.%S).$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | head -c 8)
       - export AGENT_IMG=$REPO_HOST/$AGENT_REPO_NAME:$BRANCH_NAME.$(date +%Y-%m-%d.%H.%M.%S).$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | head -c 8)
-      - aws ecr-public get-login-password --region ap-south-1 | docker login --username AWS --password-stdin $REPO_HOST
+      - aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin $REPO_HOST
   build:
     commands:
       - docker buildx create --use --name crossx
