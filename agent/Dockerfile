@@ -2,7 +2,7 @@ ARG TARGETOS
 ARG TARGETARCH
 
 # Build the application from source
-FROM public.ecr.aws/humalect/golang:1.19 AS build-stage
+FROM public.ecr.aws/docker/library/golang:1.19 AS build-stage
 
 WORKDIR /app
 

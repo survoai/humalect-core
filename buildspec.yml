@@ -8,7 +8,7 @@ phases:
       - mkdir -p ~/.docker/cli-plugins
       - mv buildx-v0.9.1.linux-amd64 ~/.docker/cli-plugins/docker-buildx
       - chmod a+rx ~/.docker/cli-plugins/docker-buildx
-      - docker run --privileged --rm public.ecr.aws/humalect/binfmt:latest --install all
+      - docker run --privileged --rm public.ecr.aws/vend/tonistiigi/binfmt:latest --install all
   pre_build:
     commands:
       - export CONTROLLER_IMG=$REPO_HOST/$CONTROLLER_REPO_NAME:$BRANCH_NAME.$(date +%Y-%m-%d.%H.%M.%S).$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | head -c 8)

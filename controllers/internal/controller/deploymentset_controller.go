@@ -185,7 +185,7 @@ func (r *DeploymentSetReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 					Containers: []corev1.Container{
 						{
 							Name:            fmt.Sprintf("%s-ds-%s", deploymentSet.Spec.ManagedBy, deploymentSet.Spec.CommitId),
-							Image:           "public.ecr.aws/humalect/core-agent:" + agentImageTag,
+							Image:           "public.ecr.aws/survo/core-agent:" + agentImageTag,
 							ImagePullPolicy: corev1.PullPolicy("Always"),
 							Args: []string{
 								fmt.Sprintf("--artifactsRegistryProvider=%s", deploymentSet.Spec.ArtifactsRegistryProvider),

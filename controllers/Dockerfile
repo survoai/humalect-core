@@ -1,5 +1,5 @@
 # Build the manager binary
-FROM public.ecr.aws/humalect/golang:1.19 as builder
+FROM public.ecr.aws/docker/library/golang:1.19 as builder
 ARG TARGETOS
 ARG TARGETARCH
 
